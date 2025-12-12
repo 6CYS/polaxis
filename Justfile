@@ -4,6 +4,10 @@
 default:
     @just --list
 
+# 检查开发环境
+check-env:
+    ./scripts/check-env.sh
+
 # 安装依赖
 install:
     npm install
