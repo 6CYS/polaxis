@@ -11,6 +11,7 @@
 - **UI Framework**: shadcn/ui.
 - **Backend/Database**: Supabase (Auth, PostgreSQL, Storage).
 - **Hosting**: Vercel.
+- **Task Runner**: Just (Justfile).
 
 ## 3. 数据模型约定
 主要数据表前缀为 `po_`。
