@@ -8,7 +8,7 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m'
 
-echo -e "${BLUE}🚀 开始初始化 PolarisOrbit 开发环境...${NC}\n"
+echo -e "${BLUE}🚀 开始初始化 Polaxis 开发环境...${NC}\n"
 
 # ==========================================
 # 1. Next.js 项目脚手架
@@ -19,7 +19,7 @@ else
     echo -e "${GREEN}📦 初始化 Next.js (TypeScript + Tailwind + App Router)...${NC}"
     
     # 临时目录策略，绕过 npm 命名限制
-    TEMP_APP_NAME="polaris-orbit-app"
+    TEMP_APP_NAME="polaxis-app"
     npx -y create-next-app@latest "$TEMP_APP_NAME" \
         --typescript \
         --tailwind \

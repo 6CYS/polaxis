@@ -77,7 +77,7 @@ export default function LoginPage() {
         <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-12 sm:px-6 lg:px-8">
             <Card className="w-full max-w-md shadow-lg">
                 <CardHeader className="space-y-1">
-                    <CardTitle className="text-2xl font-bold tracking-tight text-center">登录 PolarisOrbit</CardTitle>
+                    <CardTitle className="text-2xl font-bold tracking-tight text-center">登录 Polaxis</CardTitle>
                     <CardDescription className="text-center">
                         输入您的账号密码以进入控制台
                     </CardDescription>

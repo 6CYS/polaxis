@@ -3,8 +3,8 @@
 本文档旨在为协同工作的 AI 助手（如 Claude, ChatGPT）提供项目的上下文信息、技术约束和代码规范，以确保生成的代码符合项目标准。
 
 ## 1. 项目概况
-**项目名称**: PolarisOrbit (HTML Hosting Platform)
-**核心目标**: 这是一个简易的 HTML 静态页面托管平台。用户可以注册、上传 HTML 文件，并通过 `https://app.com/s/{username}/{slug}` 路径进行访问。
+**项目名称**: Polaxis (原 PolarisOrbit)
+**核心目标**: 这是一个简易的 HTML 静态页面托管平台。用户可以注册、上传 HTML 文件，并通过 `https://app.com/s/{username}/{slug}` 路径进行访问。项目理念：Polaxis = Polaris (方向) × Axis (坐标)。
 
 ## 2. 核心技术栈 (不可随意更改)
 - **Frontend**: Next.js 14+ (App Router), TypeScript, Tailwind CSS.
