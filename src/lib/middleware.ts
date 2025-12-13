@@ -35,11 +35,12 @@ export async function updateSession(request: NextRequest) {
     // ROUTE PROTECTION LOGIC
 
     // 1. If user is NOT logged in and tries to access dashboard, redirect to login
-    if (!user && request.nextUrl.pathname.startsWith('/dashboard')) {
-        const url = request.nextUrl.clone()
-        url.pathname = '/login'
-        return NextResponse.redirect(url)
-    }
+    // TEMPORARILY DISABLED FOR TESTING
+    /* if (!user && request.nextUrl.pathname.startsWith('/dashboard')) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/login'
+      return NextResponse.redirect(url)
+    } */
 
     // 2. If user IS logged in and tries to access login/auth pages, redirect to dashboard
     if (user && request.nextUrl.pathname.startsWith('/login')) {
