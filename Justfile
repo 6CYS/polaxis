@@ -8,6 +8,10 @@ default:
 check-env:
     ./scripts/check-env.sh
 
+# 初始化项目 (Next.js + 依赖)
+init:
+    ./scripts/init-project.sh
+
 # 安装依赖
 install:
     npm install
