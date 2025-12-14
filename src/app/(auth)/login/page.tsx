@@ -51,22 +51,28 @@ export default function LoginPage() {
     })
 
     async function onSubmit(values: z.infer<typeof formSchema>) {
+        console.log('Login form submitted', values.email)
         setLoading(true)
         setError(null)
 
         try {
-            const { error } = await supabase.auth.signInWithPassword({
+            console.log('Calling signInWithPassword...')
+            const { data, error } = await supabase.auth.signInWithPassword({
                 email: values.email,
                 password: values.password,
             })
+            console.log('Supabase response:', { data, error })
 
             if (error) {
+                console.error('Login error:', error)
                 throw error
             }
 
+            console.log('Login successful, redirecting...')
             router.push('/dashboard')
             router.refresh()
         } catch (err: any) {
+            console.error('Catch block error:', err)
             setError(err.message === 'Invalid login credentials' ? '账号或密码错误' : err.message)
         } finally {
             setLoading(false)
