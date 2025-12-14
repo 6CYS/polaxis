@@ -7,6 +7,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import { Loader2 } from 'lucide-react'
+import Image from 'next/image'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -82,11 +83,22 @@ export default function LoginPage() {
     return (
         <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-12 sm:px-6 lg:px-8">
             <Card className="w-full max-w-md shadow-lg">
-                <CardHeader className="space-y-1">
-                    <CardTitle className="text-2xl font-bold tracking-tight text-center">登录 Polaxis</CardTitle>
-                    <CardDescription className="text-center">
-                        输入您的账号密码以进入控制台
-                    </CardDescription>
+                <CardHeader className="space-y-4">
+                    <div className="flex justify-center">
+                        <Image 
+                            src="/polaxis_logo.svg" 
+                            alt="Polaxis" 
+                            width={56} 
+                            height={56}
+                            className="rounded-xl"
+                        />
+                    </div>
+                    <div className="space-y-1">
+                        <CardTitle className="text-2xl font-bold tracking-tight text-center">登录 Polaxis</CardTitle>
+                        <CardDescription className="text-center">
+                            输入您的账号密码以进入控制台
+                        </CardDescription>
+                    </div>
                 </CardHeader>
                 <CardContent>
                     <Form {...form}>

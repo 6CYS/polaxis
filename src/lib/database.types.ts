@@ -60,3 +60,4 @@ export type Site = Database['public']['Tables']['po_sites']['Row']
 export type SiteInsert = Database['public']['Tables']['po_sites']['Insert']
 export type SiteUpdate = Database['public']['Tables']['po_sites']['Update']
 
+

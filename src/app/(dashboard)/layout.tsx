@@ -1,7 +1,5 @@
-import { Menu } from 'lucide-react'
+import Image from 'next/image'
 
-import { Button } from '@/components/ui/button'
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
 import { MobileNav } from '@/components/dashboard/mobile-nav'
 import { Sidebar } from '@/components/dashboard/sidebar'
 import { UserNav } from '@/components/dashboard/user-nav'
@@ -17,13 +15,32 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 <div className="flex h-14 items-center px-4">
                     <div className="mr-4 hidden md:flex">
                         <a className="mr-6 flex items-center space-x-2" href="/">
-                            <span className="hidden font-bold sm:inline-block">
+                            <Image 
+                                src="/polaxis_logo.svg" 
+                                alt="Polaxis" 
+                                width={28} 
+                                height={28}
+                                className="rounded-md"
+                            />
+                            <span className="font-bold">
                                 Polaxis
                             </span>
                         </a>
                     </div>
 
                     <MobileNav />
+
+                    {/* 移动端 Logo */}
+                    <a className="flex items-center space-x-2 md:hidden" href="/">
+                        <Image 
+                            src="/polaxis_logo.svg" 
+                            alt="Polaxis" 
+                            width={28} 
+                            height={28}
+                            className="rounded-md"
+                        />
+                        <span className="font-bold">Polaxis</span>
+                    </a>
 
                     <div className="flex flex-1 items-center justify-between space-x-2 sm:space-x-4 md:justify-end">
                         <div className="w-full flex-1 md:w-auto md:flex-none">

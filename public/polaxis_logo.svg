@@ -1,0 +1,86 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- 背景渐变 - 深蓝黑 -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0c1222;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#050a14;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- 字母P渐变 - 冰蓝到亮白 -->
+    <linearGradient id="pGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#e0f2fe;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#bae6fd;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#7dd3fc;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- P的光晕效果 -->
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="2.5" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    
+    <!-- 星星的径向渐变（对称凸起效果） -->
+    <radialGradient id="starBevel">
+      <stop offset="0%" style="stop-color:#e0f2fe;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#bae6fd;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#7dd3fc;stop-opacity:1" />
+    </radialGradient>
+    
+    <!-- 微光效果 -->
+    <radialGradient id="shine">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:0.2" />
+      <stop offset="100%" style="stop-color:#ffffff;stop-opacity:0" />
+    </radialGradient>
+  </defs>
+  
+  <!-- App icon 圆角矩形背景 -->
+  <rect x="20" y="20" width="160" height="160" rx="35" 
+        fill="url(#bgGrad)"/>
+  
+  <!-- 顶部微光 -->
+  <ellipse cx="100" cy="60" rx="60" ry="40" 
+           fill="url(#shine)"/>
+  
+  <!-- 大写字母 P - 规整设计 -->
+  <g filter="url(#glow)">
+    <!-- P的主体 - 左边距38px -->
+    <path d="M 58 148 
+             L 58 52 
+             L 105 52 
+             C 128 52 140 64 140 84 
+             C 140 104 128 116 105 116 
+             L 78 116
+             L 78 148
+             Z
+             M 78 69 
+             L 78 99 
+             L 105 99
+             C 118 99 125 92 125 84
+             C 125 76 118 69 105 69 
+             Z" 
+          fill="url(#pGrad)"/>
+    
+    <!-- P顶部装饰线 -->
+    <line x1="78" y1="55" x2="105" y2="55" 
+          stroke="#ffffff" stroke-width="1.5" opacity="0.4" stroke-linecap="round"/>
+    
+    <!-- P圆弧边缘高光 -->
+    <path d="M 105 55 C 125 55 137 66 137 84 C 137 102 125 113 105 113" 
+          stroke="#ffffff" stroke-width="1" opacity="0.25" 
+          fill="none" stroke-linecap="round"/>
+  </g>
+  
+  <!-- 装饰：北极星（在P的右下角）- 对称凸起效果 -->
+  <g transform="translate(130, 140)">
+    <!-- 外层光晕 r=12，中心130，最右边130+12=142，距离右边框180是38px -->
+    <circle r="12" fill="#7dd3fc" opacity="0.15"/>
+    <circle r="8" fill="#bae6fd" opacity="0.2"/>
+    
+    <!-- 八角星主体 - 使用径向渐变 -->
+    <polygon points="0,-8 1.5,-2.5 8,0 1.5,2.5 0,8 -1.5,2.5 -8,0 -1.5,-2.5" 
+             fill="url(#starBevel)" opacity="0.9"/>
+  </g>
+</svg>

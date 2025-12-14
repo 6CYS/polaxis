@@ -172,3 +172,4 @@ export async function checkFileExists(siteId: string) {
     return data && data.some((file: { name: string }) => file.name === 'index.html')
 }
 
+
