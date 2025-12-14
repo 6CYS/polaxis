@@ -1,0 +1,174 @@
+'use server'
+
+import { revalidatePath } from 'next/cache'
+import { redirect } from 'next/navigation'
+import { createServerSupabaseClient, createAdminSupabaseClient } from '@/lib/supabase-server'
+import { SiteInsert } from '@/lib/database.types'
+
+export async function createSite(formData: FormData) {
+    const supabase = await createServerSupabaseClient()
+    
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    
+    if (authError || !user) {
+        return { error: '请先登录' }
+    }
+
+    const name = formData.get('name') as string
+    const slug = formData.get('slug') as string
+    const description = formData.get('description') as string | null
+
+    // 验证 slug 格式
+    const slugRegex = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
+    if (!slugRegex.test(slug)) {
+        return { error: 'Slug 只能包含小写字母、数字和连字符' }
+    }
+
+    // 检查 slug 是否已存在（同一用户下）
+    const { data: existingSite } = await supabase
+        .from('po_sites')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('slug', slug)
+        .single()
+
+    if (existingSite) {
+        return { error: '此 Slug 已被使用，请换一个' }
+    }
+
+    const siteData: SiteInsert = {
+        user_id: user.id,
+        name,
+        slug,
+        description: description || null,
+    }
+
+    const { data, error } = await supabase
+        .from('po_sites')
+        .insert(siteData)
+        .select()
+        .single()
+
+    if (error) {
+        console.error('Create site error:', error)
+        return { error: '创建站点失败，请稍后重试' }
+    }
+
+    revalidatePath('/dashboard')
+    revalidatePath('/dashboard/sites')
+    redirect(`/dashboard/sites/${data.id}`)
+}
+
+export async function deleteSite(siteId: string) {
+    const supabase = await createServerSupabaseClient()
+    const adminClient = createAdminSupabaseClient()
+    
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    
+    if (authError || !user) {
+        return { error: '请先登录' }
+    }
+
+    // 先获取站点信息确认所有权
+    const { data: site, error: fetchError } = await supabase
+        .from('po_sites')
+        .select('*')
+        .eq('id', siteId)
+        .eq('user_id', user.id)
+        .single()
+
+    if (fetchError || !site) {
+        return { error: '站点不存在或无权限' }
+    }
+
+    // 删除 Storage 中的文件
+    const storagePath = `${user.id}/${siteId}`
+    const { data: files } = await adminClient.storage
+        .from('sites')
+        .list(storagePath)
+
+    if (files && files.length > 0) {
+        const filePaths = files.map((file: { name: string }) => `${storagePath}/${file.name}`)
+        await adminClient.storage.from('sites').remove(filePaths)
+    }
+
+    // 删除数据库记录
+    const { error: deleteError } = await supabase
+        .from('po_sites')
+        .delete()
+        .eq('id', siteId)
+
+    if (deleteError) {
+        console.error('Delete site error:', deleteError)
+        return { error: '删除站点失败' }
+    }
+
+    revalidatePath('/dashboard')
+    revalidatePath('/dashboard/sites')
+    redirect('/dashboard/sites')
+}
+
+export async function getSites() {
+    const supabase = await createServerSupabaseClient()
+    
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    if (!user) {
+        return []
+    }
+
+    const { data: sites, error } = await supabase
+        .from('po_sites')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+
+    if (error) {
+        console.error('Get sites error:', error)
+        return []
+    }
+
+    return sites
+}
+
+export async function getSite(siteId: string) {
+    const supabase = await createServerSupabaseClient()
+    
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    if (!user) {
+        return null
+    }
+
+    const { data: site, error } = await supabase
+        .from('po_sites')
+        .select('*')
+        .eq('id', siteId)
+        .eq('user_id', user.id)
+        .single()
+
+    if (error) {
+        return null
+    }
+
+    return site
+}
+
+export async function checkFileExists(siteId: string) {
+    const supabase = await createServerSupabaseClient()
+    const adminClient = createAdminSupabaseClient()
+    
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    if (!user) {
+        return false
+    }
+
+    const filePath = `${user.id}/${siteId}/index.html`
+    const { data } = await adminClient.storage
+        .from('sites')
+        .list(`${user.id}/${siteId}`)
+
+    return data && data.some((file: { name: string }) => file.name === 'index.html')
+}
+
