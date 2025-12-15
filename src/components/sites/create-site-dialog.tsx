@@ -87,7 +87,7 @@ export function CreateSiteDialog({ trigger }: CreateSiteDialogProps) {
             setLoading(false)
             router.refresh()
             if (result.siteId) {
-                router.push(`/dashboard/sites/${result.siteId}`)
+                router.push(`/sites/${result.siteId}`)
             }
         }
     }

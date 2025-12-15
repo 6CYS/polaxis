@@ -55,8 +55,8 @@ export async function createSite(formData: FormData) {
     }
 
     revalidatePath('/dashboard')
-    revalidatePath('/dashboard/sites')
-    redirect(`/dashboard/sites/${data.id}`)
+    revalidatePath('/sites')
+    redirect(`/sites/${data.id}`)
 }
 
 export async function createSiteWithFile(formData: FormData) {
@@ -142,9 +142,117 @@ export async function createSiteWithFile(formData: FormData) {
     }
 
     revalidatePath('/dashboard')
-    revalidatePath('/dashboard/sites')
+    revalidatePath('/sites')
     
     return { success: true, siteId: site.id }
+}
+
+export async function updateSite(siteId: string, formData: FormData) {
+    const supabase = await createServerSupabaseClient()
+    
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    
+    if (authError || !user) {
+        return { error: '请先登录' }
+    }
+
+    const name = formData.get('name') as string
+    const description = formData.get('description') as string | null
+
+    if (!name) {
+        return { error: '站点名称不能为空' }
+    }
+
+    // 验证站点所有权
+    const { data: existingSite, error: fetchError } = await supabase
+        .from('po_sites')
+        .select('*')
+        .eq('id', siteId)
+        .eq('user_id', user.id)
+        .single()
+
+    if (fetchError || !existingSite) {
+        return { error: '站点不存在或无权限' }
+    }
+
+    // 更新站点信息
+    const { error: updateError } = await supabase
+        .from('po_sites')
+        .update({
+            name,
+            description: description || null,
+            updated_at: new Date().toISOString(),
+        })
+        .eq('id', siteId)
+
+    if (updateError) {
+        console.error('Update site error:', updateError)
+        return { error: '更新站点失败' }
+    }
+
+    revalidatePath('/dashboard')
+    revalidatePath('/sites')
+    revalidatePath(`/sites/${siteId}`)
+    
+    return { success: true }
+}
+
+export async function uploadSiteFile(siteId: string, formData: FormData) {
+    const supabase = await createServerSupabaseClient()
+    const adminClient = createAdminSupabaseClient()
+    
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    
+    if (authError || !user) {
+        return { error: '请先登录' }
+    }
+
+    const file = formData.get('file') as File
+
+    if (!file || !(file instanceof File) || file.size === 0) {
+        return { error: '请选择文件' }
+    }
+
+    // 验证文件类型
+    if (!file.name.endsWith('.html') && !file.name.endsWith('.htm')) {
+        return { error: '只支持 .html 或 .htm 文件' }
+    }
+
+    // 验证文件大小
+    if (file.size > 5 * 1024 * 1024) {
+        return { error: '文件大小不能超过 5MB' }
+    }
+
+    // 验证站点所有权
+    const { data: existingSite, error: fetchError } = await supabase
+        .from('po_sites')
+        .select('*')
+        .eq('id', siteId)
+        .eq('user_id', user.id)
+        .single()
+
+    if (fetchError || !existingSite) {
+        return { error: '站点不存在或无权限' }
+    }
+
+    const filePath = `${user.id}/${siteId}/index.html`
+    const { error: uploadError } = await adminClient.storage
+        .from('sites')
+        .upload(filePath, file, {
+            contentType: 'text/html',
+            upsert: true,
+        })
+
+    if (uploadError) {
+        console.error('Upload file error:', uploadError)
+        return { error: '文件上传失败' }
+    }
+
+    revalidatePath('/dashboard')
+    revalidatePath('/sites')
+    revalidatePath(`/sites/${siteId}`)
+    
+    return { success: true }
 }
 
 export async function deleteSite(siteId: string) {
@@ -192,8 +300,8 @@ export async function deleteSite(siteId: string) {
     }
 
     revalidatePath('/dashboard')
-    revalidatePath('/dashboard/sites')
-    redirect('/dashboard/sites')
+    revalidatePath('/sites')
+    redirect('/sites')
 }
 
 export async function getSites() {
@@ -258,6 +366,23 @@ export async function checkFileExists(siteId: string) {
         .list(`${user.id}/${siteId}`)
 
     return data && data.some((file: { name: string }) => file.name === 'index.html')
+}
+
+export async function getCurrentUsername() {
+    const supabase = await createServerSupabaseClient()
+    
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    if (!user) {
+        return 'user'
+    }
+
+    // 使用邮箱前缀作为用户名，如果没有邮箱则使用 user id 的前8位
+    if (user.email) {
+        return user.email.split('@')[0]
+    }
+    
+    return user.id.substring(0, 8)
 }
 
 

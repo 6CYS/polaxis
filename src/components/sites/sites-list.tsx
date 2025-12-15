@@ -21,18 +21,20 @@ import {
     CardTitle,
 } from '@/components/ui/card'
 import { DataTable } from '@/components/ui/data-table'
-import { columns } from '@/components/sites/columns'
+import { createColumns } from '@/components/sites/columns'
 import { CreateSiteDialog } from '@/components/sites/create-site-dialog'
 import { Site } from '@/lib/database.types'
 
 interface SitesListProps {
     sites: Site[]
+    username: string
 }
 
 type ViewMode = 'list' | 'card'
 
-export function SitesList({ sites }: SitesListProps) {
+export function SitesList({ sites, username }: SitesListProps) {
     const [viewMode, setViewMode] = useState<ViewMode>('list')
+    const columns = createColumns(username)
 
     if (sites.length === 0) {
         return (
@@ -102,7 +104,7 @@ export function SitesList({ sites }: SitesListProps) {
                                         <div className="space-y-1">
                                             <CardTitle className="text-base">
                                                 <Link 
-                                                    href={`/dashboard/sites/${site.id}`}
+                                                    href={`/sites/${site.id}`}
                                                     className="hover:underline"
                                                 >
                                                     {site.name}
@@ -119,7 +121,7 @@ export function SitesList({ sites }: SitesListProps) {
                                         className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
                                         asChild
                                     >
-                                        <Link href={`/dashboard/sites/${site.id}`}>
+                                        <Link href={`/sites/${site.id}`}>
                                             <ExternalLink className="h-4 w-4" />
                                         </Link>
                                     </Button>

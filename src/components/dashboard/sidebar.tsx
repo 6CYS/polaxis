@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Globe, Settings, PlusCircle } from 'lucide-react'
+import { LayoutDashboard, Globe, Settings } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -22,14 +22,8 @@ export function Sidebar({ className }: SidebarProps) {
         {
             label: '我的站点',
             icon: Globe,
-            href: '/dashboard/sites',
-            active: pathname.startsWith('/dashboard/sites'),
-        },
-        {
-            label: '创建站点',
-            icon: PlusCircle,
-            href: '/dashboard/new',
-            active: pathname === '/dashboard/new',
+            href: '/sites',
+            active: pathname.startsWith('/sites'),
         },
         {
             label: '设置',

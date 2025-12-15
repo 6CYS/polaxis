@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { PlusCircle, Globe, ArrowRight } from 'lucide-react'
+import { Globe, ArrowRight } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -10,6 +10,7 @@ import {
     CardTitle,
 } from '@/components/ui/card'
 import { getSites } from '@/lib/actions/sites'
+import { CreateSiteDialog } from '@/components/sites/create-site-dialog'
 
 export default async function DashboardPage() {
     const sites = await getSites()
@@ -53,7 +54,7 @@ export default async function DashboardPage() {
                     </div>
                     {sites.length > 0 && (
                         <Button variant="outline" size="sm" asChild>
-                            <Link href="/dashboard/sites">
+                            <Link href="/sites">
                                 查看全部
                                 <ArrowRight className="ml-2 h-4 w-4" />
                             </Link>
@@ -68,12 +69,7 @@ export default async function DashboardPage() {
                             <p className="text-muted-foreground mb-4">
                                 点击下方按钮开始创建您的第一个站点
                             </p>
-                            <Button asChild>
-                                <Link href="/dashboard/new">
-                                    <PlusCircle className="mr-2 h-4 w-4" />
-                                    创建站点
-                                </Link>
-                            </Button>
+                            <CreateSiteDialog />
                         </div>
                     ) : (
                         <div className="space-y-4">
@@ -84,7 +80,7 @@ export default async function DashboardPage() {
                                 >
                                     <div className="space-y-1">
                                         <Link
-                                            href={`/dashboard/sites/${site.id}`}
+                                            href={`/sites/${site.id}`}
                                             className="font-medium hover:underline"
                                         >
                                             {site.name}
