@@ -1,11 +1,12 @@
 {
+  "permissions": {
+    "allow": [
+      "Bash(cat:*)",
+      "Bash(npm run lint:*)"
+    ]
+  },
   "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
     "supabase"
-  ],
-  "permissions": {
-    "allow": [
-      "Bash(cat:*)"
-    ]
-  }
+  ]
 }

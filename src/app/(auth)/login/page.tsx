@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -18,6 +18,7 @@ import {
     FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
     Card,
     CardContent,
@@ -27,6 +28,8 @@ import {
     CardTitle,
 } from '@/components/ui/card'
 import { supabase } from '@/lib/supabase'
+
+const REMEMBER_CREDENTIALS_KEY = 'polaxis_remember_credentials'
 
 const formSchema = z.object({
     email: z.string().email({
@@ -41,6 +44,7 @@ export default function LoginPage() {
     const router = useRouter()
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
+    const [rememberMe, setRememberMe] = useState(false)
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
@@ -49,6 +53,21 @@ export default function LoginPage() {
             password: "",
         },
     })
+
+    // 从 localStorage 读取已保存的凭据
+    useEffect(() => {
+        const saved = localStorage.getItem(REMEMBER_CREDENTIALS_KEY)
+        if (saved) {
+            try {
+                const { email, password } = JSON.parse(atob(saved))
+                form.setValue('email', email)
+                form.setValue('password', password)
+                setRememberMe(true)
+            } catch {
+                localStorage.removeItem(REMEMBER_CREDENTIALS_KEY)
+            }
+        }
+    }, [form])
 
     async function onSubmit(values: z.infer<typeof formSchema>) {
         console.log('Login form submitted', values.email)
@@ -67,6 +86,14 @@ export default function LoginPage() {
             if (error) {
                 console.error('Login error:', error)
                 throw error
+            }
+
+            // 处理记住密码：保存或清除凭据
+            if (rememberMe) {
+                const credentials = btoa(JSON.stringify({ email: values.email, password: values.password }))
+                localStorage.setItem(REMEMBER_CREDENTIALS_KEY, credentials)
+            } else {
+                localStorage.removeItem(REMEMBER_CREDENTIALS_KEY)
             }
 
             console.log('Login successful, redirecting...')
@@ -132,6 +159,20 @@ export default function LoginPage() {
                                     </FormItem>
                                 )}
                             />
+
+                            <div className="flex items-center space-x-2">
+                                <Checkbox
+                                    id="remember"
+                                    checked={rememberMe}
+                                    onCheckedChange={(checked) => setRememberMe(checked === true)}
+                                />
+                                <label
+                                    htmlFor="remember"
+                                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer select-none"
+                                >
+                                    记住密码
+                                </label>
+                            </div>
 
                             {error && (
                                 <div className="text-sm font-medium text-destructive text-red-500 text-center">
