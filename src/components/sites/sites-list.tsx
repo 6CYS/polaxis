@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { RowSelectionState } from '@tanstack/react-table'
 import { 
@@ -14,6 +14,7 @@ import {
     Pencil,
     Trash2
 } from 'lucide-react'
+import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -55,10 +56,16 @@ type ViewMode = 'list' | 'card'
 
 export function SitesList({ sites, username }: SitesListProps) {
     const router = useRouter()
+    const [isRefreshing, startTransition] = useTransition()
     const [viewMode, setViewMode] = useState<ViewMode>('list')
     const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
     const [isDeleting, setIsDeleting] = useState(false)
+    const [batchDeleteDialogOpen, setBatchDeleteDialogOpen] = useState(false)
+    const [shouldCloseOnRefresh, setShouldCloseOnRefresh] = useState(false)
+    const toastIdRef = useRef<string | number | undefined>(undefined)
     const columns = createColumns(username)
+
+    const isBusy = isDeleting || isRefreshing
 
     // 获取选中的站点 ID
     const selectedSiteIds = Object.keys(rowSelection)
@@ -68,25 +75,46 @@ export function SitesList({ sites, username }: SitesListProps) {
 
     const selectedCount = selectedSiteIds.length
 
+    useEffect(() => {
+        if (!shouldCloseOnRefresh || isRefreshing) return
+
+        queueMicrotask(() => {
+            toast.success('删除成功', { id: toastIdRef.current })
+            toastIdRef.current = undefined
+
+            setRowSelection({})
+            setIsDeleting(false)
+            setBatchDeleteDialogOpen(false)
+            setShouldCloseOnRefresh(false)
+        })
+    }, [isRefreshing, shouldCloseOnRefresh])
+
     const handleBatchDelete = async () => {
         if (selectedSiteIds.length === 0) return
 
         setIsDeleting(true)
+        toastIdRef.current = toast.loading('删除中...')
         try {
             const result = await deleteSites(selectedSiteIds)
             if (result.error) {
                 console.error('Delete sites error:', result.error)
-                alert(result.error)
-            } else {
-                setRowSelection({})
-                router.refresh()
+                toast.error(result.error, { id: toastIdRef.current })
+                toastIdRef.current = undefined
+                setIsDeleting(false)
+                return
             }
         } catch (error) {
             console.error('Delete sites error:', error)
-            alert('删除失败，请稍后重试')
-        } finally {
+            toast.error('删除失败，请稍后重试', { id: toastIdRef.current })
+            toastIdRef.current = undefined
             setIsDeleting(false)
+            return
         }
+
+        setShouldCloseOnRefresh(true)
+        startTransition(() => {
+            router.refresh()
+        })
     }
 
     if (sites.length === 0) {
@@ -118,7 +146,13 @@ export function SitesList({ sites, username }: SitesListProps) {
                 <div className="flex items-center gap-2">
                     <CreateSiteDialog />
                     {selectedCount > 0 && (
-                        <AlertDialog>
+                        <AlertDialog
+                            open={batchDeleteDialogOpen}
+                            onOpenChange={(open) => {
+                                if (!open && isBusy) return
+                                setBatchDeleteDialogOpen(open)
+                            }}
+                        >
                             <AlertDialogTrigger asChild>
                                 <Button variant="destructive" size="sm" disabled={isDeleting}>
                                     <Trash2 className="h-4 w-4 mr-1.5" />
@@ -133,12 +167,13 @@ export function SitesList({ sites, username }: SitesListProps) {
                                     </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
-                                    <AlertDialogCancel>取消</AlertDialogCancel>
+                                    <AlertDialogCancel disabled={isBusy}>取消</AlertDialogCancel>
                                     <AlertDialogAction
                                         onClick={handleBatchDelete}
                                         className="bg-destructive text-white hover:bg-destructive/90"
+                                        disabled={isBusy}
                                     >
-                                        {isDeleting ? '删除中...' : '确认删除'}
+                                        {isBusy ? '删除中...' : '确认删除'}
                                     </AlertDialogAction>
                                 </AlertDialogFooter>
                             </AlertDialogContent>

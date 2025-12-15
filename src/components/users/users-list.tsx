@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { 
     Users, 
@@ -9,11 +9,11 @@ import {
     Shield,
     Mail,
     Calendar,
-    Clock,
     MoreHorizontal,
     UserCheck,
     UserX
 } from 'lucide-react'
+import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -73,11 +73,36 @@ interface UsersListProps {
 
 export function UsersList({ users, currentUserId }: UsersListProps) {
     const router = useRouter()
+    const [isRefreshing, startTransition] = useTransition()
     const [selectedIds, setSelectedIds] = useState<string[]>([])
     const [isDeleting, setIsDeleting] = useState(false)
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
     const [userToDelete, setUserToDelete] = useState<User | null>(null)
     const [batchDeleteDialogOpen, setBatchDeleteDialogOpen] = useState(false)
+    const [pendingCloseDialog, setPendingCloseDialog] = useState<'single' | 'batch' | null>(null)
+    const toastIdRef = useRef<string | number | undefined>(undefined)
+
+    const isBusy = isDeleting || isRefreshing
+
+    useEffect(() => {
+        if (!pendingCloseDialog || isRefreshing) return
+
+        queueMicrotask(() => {
+            toast.success('删除成功', { id: toastIdRef.current })
+            toastIdRef.current = undefined
+
+            if (pendingCloseDialog === 'single') {
+                setDeleteDialogOpen(false)
+                setUserToDelete(null)
+            } else {
+                setBatchDeleteDialogOpen(false)
+                setSelectedIds([])
+            }
+
+            setIsDeleting(false)
+            setPendingCloseDialog(null)
+        })
+    }, [isRefreshing, pendingCloseDialog])
 
     const handleSelectAll = (checked: boolean) => {
         if (checked) {
@@ -100,34 +125,54 @@ export function UsersList({ users, currentUserId }: UsersListProps) {
         if (!userToDelete) return
         
         setIsDeleting(true)
-        const result = await deleteUser(userToDelete.id)
-        
-        if (result.error) {
-            alert(result.error)
-        } else {
-            router.refresh()
+        toastIdRef.current = toast.loading('删除中...')
+        try {
+            const result = await deleteUser(userToDelete.id)
+            if (result.error) {
+                toast.error(result.error, { id: toastIdRef.current })
+                toastIdRef.current = undefined
+                setIsDeleting(false)
+                return
+            }
+        } catch (error) {
+            console.error(error)
+            toast.error('删除失败，请稍后重试', { id: toastIdRef.current })
+            toastIdRef.current = undefined
+            setIsDeleting(false)
+            return
         }
-        
-        setIsDeleting(false)
-        setDeleteDialogOpen(false)
-        setUserToDelete(null)
+
+        setPendingCloseDialog('single')
+        startTransition(() => {
+            router.refresh()
+        })
     }
 
     const handleBatchDelete = async () => {
         if (selectedIds.length === 0) return
         
         setIsDeleting(true)
-        const result = await deleteUsers(selectedIds)
-        
-        if (result.error) {
-            alert(result.error)
-        } else {
-            setSelectedIds([])
-            router.refresh()
+        toastIdRef.current = toast.loading('删除中...')
+        try {
+            const result = await deleteUsers(selectedIds)
+            if (result.error) {
+                toast.error(result.error, { id: toastIdRef.current })
+                toastIdRef.current = undefined
+                setIsDeleting(false)
+                return
+            }
+        } catch (error) {
+            console.error(error)
+            toast.error('删除失败，请稍后重试', { id: toastIdRef.current })
+            toastIdRef.current = undefined
+            setIsDeleting(false)
+            return
         }
-        
-        setIsDeleting(false)
-        setBatchDeleteDialogOpen(false)
+
+        setPendingCloseDialog('batch')
+        startTransition(() => {
+            router.refresh()
+        })
     }
 
     const formatDate = (dateStr: string | null) => {
@@ -316,7 +361,13 @@ export function UsersList({ users, currentUserId }: UsersListProps) {
             </div>
 
             {/* 单个删除确认对话框 */}
-            <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+            <AlertDialog
+                open={deleteDialogOpen}
+                onOpenChange={(open) => {
+                    if (!open && isBusy) return
+                    setDeleteDialogOpen(open)
+                }}
+            >
                 <AlertDialogContent>
                     <AlertDialogHeader>
                         <AlertDialogTitle>确认删除用户</AlertDialogTitle>
@@ -326,20 +377,26 @@ export function UsersList({ users, currentUserId }: UsersListProps) {
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel disabled={isDeleting}>取消</AlertDialogCancel>
+                        <AlertDialogCancel disabled={isBusy}>取消</AlertDialogCancel>
                         <AlertDialogAction
                             onClick={handleDeleteSingle}
                             className="bg-destructive text-white hover:bg-destructive/90"
-                            disabled={isDeleting}
+                            disabled={isBusy}
                         >
-                            {isDeleting ? '删除中...' : '确认删除'}
+                            {isBusy ? '删除中...' : '确认删除'}
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
 
             {/* 批量删除确认对话框 */}
-            <AlertDialog open={batchDeleteDialogOpen} onOpenChange={setBatchDeleteDialogOpen}>
+            <AlertDialog
+                open={batchDeleteDialogOpen}
+                onOpenChange={(open) => {
+                    if (!open && isBusy) return
+                    setBatchDeleteDialogOpen(open)
+                }}
+            >
                 <AlertDialogContent>
                     <AlertDialogHeader>
                         <AlertDialogTitle>确认批量删除</AlertDialogTitle>
@@ -349,13 +406,13 @@ export function UsersList({ users, currentUserId }: UsersListProps) {
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel disabled={isDeleting}>取消</AlertDialogCancel>
+                        <AlertDialogCancel disabled={isBusy}>取消</AlertDialogCancel>
                         <AlertDialogAction
                             onClick={handleBatchDelete}
                             className="bg-destructive text-white hover:bg-destructive/90"
-                            disabled={isDeleting}
+                            disabled={isBusy}
                         >
-                            {isDeleting ? '删除中...' : '确认删除'}
+                            {isBusy ? '删除中...' : '确认删除'}
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
@@ -363,4 +420,3 @@ export function UsersList({ users, currentUserId }: UsersListProps) {
         </div>
     )
 }
-

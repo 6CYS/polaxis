@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Loader2, UserPlus, Eye, EyeOff } from 'lucide-react'
+import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -24,17 +25,22 @@ interface CreateUserDialogProps {
 
 export function CreateUserDialog({ trigger }: CreateUserDialogProps) {
     const router = useRouter()
+    const [isRefreshing, startTransition] = useTransition()
     const [open, setOpen] = useState(false)
     const [loading, setLoading] = useState(false)
+    const [shouldCloseOnRefresh, setShouldCloseOnRefresh] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [showPassword, setShowPassword] = useState(false)
+    const toastIdRef = useRef<string | number | undefined>(undefined)
     
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
     const [fullName, setFullName] = useState('')
     const [isAdmin, setIsAdmin] = useState(false)
 
-    const resetForm = () => {
+    const isBusy = loading || isRefreshing
+
+    function resetForm() {
         setEmail('')
         setPassword('')
         setFullName('')
@@ -42,6 +48,20 @@ export function CreateUserDialog({ trigger }: CreateUserDialogProps) {
         setError(null)
         setShowPassword(false)
     }
+
+    useEffect(() => {
+        if (!shouldCloseOnRefresh || isRefreshing) return
+
+        queueMicrotask(() => {
+            toast.success('创建成功', { id: toastIdRef.current })
+            toastIdRef.current = undefined
+
+            setOpen(false)
+            resetForm()
+            setLoading(false)
+            setShouldCloseOnRefresh(false)
+        })
+    }, [isRefreshing, shouldCloseOnRefresh])
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault()
@@ -54,21 +74,34 @@ export function CreateUserDialog({ trigger }: CreateUserDialogProps) {
         formData.set('fullName', fullName)
         formData.set('isAdmin', isAdmin ? 'true' : 'false')
 
-        const result = await createUser(formData)
+        toastIdRef.current = toast.loading('创建中...')
+        let result: Awaited<ReturnType<typeof createUser>>
+        try {
+            result = await createUser(formData)
+        } catch (error) {
+            console.error(error)
+            toast.error('创建失败，请稍后重试', { id: toastIdRef.current })
+            toastIdRef.current = undefined
+            setLoading(false)
+            return
+        }
 
         if (result?.error) {
             setError(result.error)
+            toast.error(result.error, { id: toastIdRef.current })
+            toastIdRef.current = undefined
             setLoading(false)
         } else if (result?.success) {
-            setOpen(false)
-            resetForm()
-            setLoading(false)
-            router.refresh()
+            setShouldCloseOnRefresh(true)
+            startTransition(() => {
+                router.refresh()
+            })
         }
     }
 
     return (
         <Dialog open={open} onOpenChange={(isOpen) => {
+            if (!isOpen && isBusy) return
             setOpen(isOpen)
             if (!isOpen) resetForm()
         }}>
@@ -97,7 +130,7 @@ export function CreateUserDialog({ trigger }: CreateUserDialogProps) {
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             required
-                            disabled={loading}
+                            disabled={isBusy}
                         />
                     </div>
 
@@ -112,7 +145,7 @@ export function CreateUserDialog({ trigger }: CreateUserDialogProps) {
                                 onChange={(e) => setPassword(e.target.value)}
                                 required
                                 minLength={6}
-                                disabled={loading}
+                                disabled={isBusy}
                                 className="pr-10"
                             />
                             <Button
@@ -121,7 +154,7 @@ export function CreateUserDialog({ trigger }: CreateUserDialogProps) {
                                 size="icon"
                                 className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
                                 onClick={() => setShowPassword(!showPassword)}
-                                disabled={loading}
+                                disabled={isBusy}
                             >
                                 {showPassword ? (
                                     <EyeOff className="h-4 w-4 text-muted-foreground" />
@@ -140,7 +173,7 @@ export function CreateUserDialog({ trigger }: CreateUserDialogProps) {
                             placeholder="张三"
                             value={fullName}
                             onChange={(e) => setFullName(e.target.value)}
-                            disabled={loading}
+                            disabled={isBusy}
                         />
                     </div>
 
@@ -149,7 +182,7 @@ export function CreateUserDialog({ trigger }: CreateUserDialogProps) {
                             id="isAdmin"
                             checked={isAdmin}
                             onCheckedChange={(checked) => setIsAdmin(checked === true)}
-                            disabled={loading}
+                            disabled={isBusy}
                         />
                         <Label 
                             htmlFor="isAdmin" 
@@ -170,13 +203,13 @@ export function CreateUserDialog({ trigger }: CreateUserDialogProps) {
                             type="button" 
                             variant="outline" 
                             onClick={() => setOpen(false)}
-                            disabled={loading}
+                            disabled={isBusy}
                         >
                             取消
                         </Button>
-                        <Button type="submit" disabled={loading}>
-                            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            {loading ? '创建中...' : '创建用户'}
+                        <Button type="submit" disabled={isBusy}>
+                            {isBusy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            {isBusy ? '创建中...' : '创建用户'}
                         </Button>
                     </div>
                 </form>
@@ -184,4 +217,3 @@ export function CreateUserDialog({ trigger }: CreateUserDialogProps) {
         </Dialog>
     )
 }
-

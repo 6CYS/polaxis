@@ -1,7 +1,9 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Trash2, Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -22,6 +24,7 @@ interface DeleteSiteButtonProps {
 }
 
 export function DeleteSiteButton({ siteId, siteName }: DeleteSiteButtonProps) {
+    const router = useRouter()
     const [open, setOpen] = useState(false)
     const [confirmText, setConfirmText] = useState('')
     const [loading, setLoading] = useState(false)
@@ -35,17 +38,34 @@ export function DeleteSiteButton({ siteId, siteName }: DeleteSiteButtonProps) {
         setLoading(true)
         setError(null)
 
-        const result = await deleteSite(siteId)
-
-        if (result?.error) {
-            setError(result.error)
+        const toastId = toast.loading('删除中...')
+        try {
+            const result = await deleteSite(siteId)
+            if (result?.error) {
+                setError(result.error)
+                toast.error(result.error, { id: toastId })
+                setLoading(false)
+                return
+            }
+        } catch (e) {
+            console.error(e)
+            toast.error('删除失败，请稍后重试', { id: toastId })
             setLoading(false)
+            return
         }
-        // 成功后 deleteSite 会自动 redirect
+
+        toast.success('删除成功', { id: toastId })
+        router.replace('/sites')
     }
 
     return (
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog
+            open={open}
+            onOpenChange={(nextOpen) => {
+                if (!nextOpen && loading) return
+                setOpen(nextOpen)
+            }}
+        >
             <DialogTrigger asChild>
                 <Button variant="destructive" size="sm">
                     <Trash2 className="mr-2 h-4 w-4" />
@@ -96,5 +116,3 @@ export function DeleteSiteButton({ siteId, siteName }: DeleteSiteButtonProps) {
         </Dialog>
     )
 }
-
-

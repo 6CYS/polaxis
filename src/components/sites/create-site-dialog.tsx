@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Loader2, PlusCircle, Upload, FileCode } from 'lucide-react'
+import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -23,14 +24,30 @@ interface CreateSiteDialogProps {
 
 export function CreateSiteDialog({ trigger }: CreateSiteDialogProps) {
     const router = useRouter()
+    const [isRefreshing, startTransition] = useTransition()
     const [open, setOpen] = useState(false)
     const [loading, setLoading] = useState(false)
+    const [shouldCloseOnRefresh, setShouldCloseOnRefresh] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [name, setName] = useState('')
     const [slug, setSlug] = useState('')
     const [file, setFile] = useState<File | null>(null)
     const [isDragging, setIsDragging] = useState(false)
     const fileInputRef = useRef<HTMLInputElement>(null)
+    const toastIdRef = useRef<string | number | undefined>(undefined)
+
+    const isBusy = loading || isRefreshing
+
+    function resetForm() {
+        setName('')
+        setSlug('')
+        setFile(null)
+        setError(null)
+        setIsDragging(false)
+        if (fileInputRef.current) {
+            fileInputRef.current.value = ''
+        }
+    }
 
     const handleSlugChange = (value: string) => {
         // 只保留字母、数字和短横线，其他字符直接过滤掉
@@ -109,16 +126,19 @@ export function CreateSiteDialog({ trigger }: CreateSiteDialogProps) {
         }
     }
 
-    const resetForm = () => {
-        setName('')
-        setSlug('')
-        setFile(null)
-        setError(null)
-        setIsDragging(false)
-        if (fileInputRef.current) {
-            fileInputRef.current.value = ''
-        }
-    }
+    useEffect(() => {
+        if (!shouldCloseOnRefresh || isRefreshing) return
+
+        queueMicrotask(() => {
+            toast.success('创建成功', { id: toastIdRef.current })
+            toastIdRef.current = undefined
+
+            setOpen(false)
+            resetForm()
+            setLoading(false)
+            setShouldCloseOnRefresh(false)
+        })
+    }, [isRefreshing, shouldCloseOnRefresh])
 
     async function handleSubmit(formData: FormData) {
         if (!file) {
@@ -133,21 +153,34 @@ export function CreateSiteDialog({ trigger }: CreateSiteDialogProps) {
         formData.set('slug', slug)
         formData.set('file', file)
 
-        const result = await createSiteWithFile(formData)
+        toastIdRef.current = toast.loading('创建站点中...')
+        let result: Awaited<ReturnType<typeof createSiteWithFile>>
+        try {
+            result = await createSiteWithFile(formData)
+        } catch (e) {
+            console.error(e)
+            toast.error('创建失败，请稍后重试', { id: toastIdRef.current })
+            toastIdRef.current = undefined
+            setLoading(false)
+            return
+        }
 
         if (result?.error) {
             setError(result.error)
+            toast.error(result.error, { id: toastIdRef.current })
+            toastIdRef.current = undefined
             setLoading(false)
         } else if (result?.success) {
-            setOpen(false)
-            resetForm()
-            setLoading(false)
-            router.refresh()
+            setShouldCloseOnRefresh(true)
+            startTransition(() => {
+                router.refresh()
+            })
         }
     }
 
     return (
         <Dialog open={open} onOpenChange={(isOpen) => {
+            if (!isOpen && isBusy) return
             setOpen(isOpen)
             if (!isOpen) resetForm()
         }}>
@@ -189,7 +222,7 @@ export function CreateSiteDialog({ trigger }: CreateSiteDialogProps) {
                                 accept=".html,.htm"
                                 onChange={handleFileChange}
                                 className="hidden"
-                                disabled={loading}
+                                disabled={isBusy}
                             />
                             {file ? (
                                 <div className="flex items-center justify-center gap-2 text-primary">
@@ -217,7 +250,7 @@ export function CreateSiteDialog({ trigger }: CreateSiteDialogProps) {
                             value={name}
                             onChange={(e) => setName(e.target.value)}
                             required
-                            disabled={loading}
+                            disabled={isBusy}
                         />
                     </div>
 
@@ -230,7 +263,7 @@ export function CreateSiteDialog({ trigger }: CreateSiteDialogProps) {
                             value={slug}
                             onChange={(e) => handleSlugChange(e.target.value)}
                             required
-                            disabled={loading}
+                            disabled={isBusy}
                         />
                         <p className="text-xs text-muted-foreground">
                             访问地址: /s/用户名/<span className="font-mono text-foreground">{slug || 'your-slug'}</span>
@@ -243,7 +276,7 @@ export function CreateSiteDialog({ trigger }: CreateSiteDialogProps) {
                             id="description"
                             name="description"
                             placeholder="简单描述一下这个站点..."
-                            disabled={loading}
+                            disabled={isBusy}
                         />
                     </div>
 
@@ -258,13 +291,13 @@ export function CreateSiteDialog({ trigger }: CreateSiteDialogProps) {
                             type="button" 
                             variant="outline" 
                             onClick={() => setOpen(false)}
-                            disabled={loading}
+                            disabled={isBusy}
                         >
                             取消
                         </Button>
-                        <Button type="submit" disabled={loading || !file}>
-                            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            {loading ? '创建中...' : '创建站点'}
+                        <Button type="submit" disabled={isBusy || !file}>
+                            {isBusy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            {isBusy ? '创建中...' : '创建站点'}
                         </Button>
                     </div>
                 </form>

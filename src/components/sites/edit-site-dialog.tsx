@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Loader2, Upload, FileCode, Trash2, Pencil } from 'lucide-react'
+import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -36,15 +37,47 @@ interface EditSiteDialogProps {
 
 export function EditSiteDialog({ site, trigger }: EditSiteDialogProps) {
     const router = useRouter()
+    const [isRefreshing, startTransition] = useTransition()
     const [open, setOpen] = useState(false)
     const [loading, setLoading] = useState(false)
     const [deleteLoading, setDeleteLoading] = useState(false)
+    const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+    const [shouldCloseOnRefresh, setShouldCloseOnRefresh] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [success, setSuccess] = useState<string | null>(null)
     const [name, setName] = useState(site.name)
     const [description, setDescription] = useState(site.description || '')
     const [file, setFile] = useState<File | null>(null)
     const fileInputRef = useRef<HTMLInputElement>(null)
+    const toastIdRef = useRef<string | number | undefined>(undefined)
+
+    const isBusy = loading || deleteLoading || isRefreshing
+
+    const resetForm = useCallback(() => {
+        setName(site.name)
+        setDescription(site.description || '')
+        setFile(null)
+        setError(null)
+        setSuccess(null)
+        if (fileInputRef.current) {
+            fileInputRef.current.value = ''
+        }
+    }, [site.description, site.name])
+
+    useEffect(() => {
+        if (!shouldCloseOnRefresh || isRefreshing) return
+
+        queueMicrotask(() => {
+            toast.success('保存成功', { id: toastIdRef.current })
+            toastIdRef.current = undefined
+
+            setOpen(false)
+            resetForm()
+            setLoading(false)
+            setShouldCloseOnRefresh(false)
+            setSuccess(null)
+        })
+    }, [isRefreshing, resetForm, shouldCloseOnRefresh])
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const selectedFile = e.target.files?.[0]
@@ -62,32 +95,33 @@ export function EditSiteDialog({ site, trigger }: EditSiteDialogProps) {
         }
     }
 
-    const resetForm = () => {
-        setName(site.name)
-        setDescription(site.description || '')
-        setFile(null)
-        setError(null)
-        setSuccess(null)
-        if (fileInputRef.current) {
-            fileInputRef.current.value = ''
-        }
-    }
-
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault()
         setLoading(true)
         setError(null)
         setSuccess(null)
+        toastIdRef.current = toast.loading('保存中...')
 
         // 更新站点信息
         const formData = new FormData()
         formData.set('name', name)
         formData.set('description', description)
 
-        const updateResult = await updateSite(site.id, formData)
+        let updateResult: Awaited<ReturnType<typeof updateSite>>
+        try {
+            updateResult = await updateSite(site.id, formData)
+        } catch (e) {
+            console.error(e)
+            toast.error('保存失败，请稍后重试', { id: toastIdRef.current })
+            toastIdRef.current = undefined
+            setLoading(false)
+            return
+        }
 
         if (updateResult?.error) {
             setError(updateResult.error)
+            toast.error(updateResult.error, { id: toastIdRef.current })
+            toastIdRef.current = undefined
             setLoading(false)
             return
         }
@@ -96,36 +130,66 @@ export function EditSiteDialog({ site, trigger }: EditSiteDialogProps) {
         if (file) {
             const fileFormData = new FormData()
             fileFormData.set('file', file)
-            const uploadResult = await uploadSiteFile(site.id, fileFormData)
+            let uploadResult: Awaited<ReturnType<typeof uploadSiteFile>>
+            try {
+                uploadResult = await uploadSiteFile(site.id, fileFormData)
+            } catch (e) {
+                console.error(e)
+                toast.error('文件上传失败，请稍后重试', { id: toastIdRef.current })
+                toastIdRef.current = undefined
+                setLoading(false)
+                return
+            }
 
             if (uploadResult?.error) {
                 setError(uploadResult.error)
+                toast.error(uploadResult.error, { id: toastIdRef.current })
+                toastIdRef.current = undefined
                 setLoading(false)
                 return
             }
         }
 
         setSuccess('保存成功')
-        setLoading(false)
         setFile(null)
         if (fileInputRef.current) {
             fileInputRef.current.value = ''
         }
-        router.refresh()
+
+        setShouldCloseOnRefresh(true)
+        startTransition(() => {
+            router.refresh()
+        })
     }
 
     async function handleDelete() {
         setDeleteLoading(true)
-        const result = await deleteSite(site.id)
-        if (result?.error) {
-            setError(result.error)
+        const toastId = toast.loading('删除中...')
+        try {
+            const result = await deleteSite(site.id)
+            if (result?.error) {
+                setError(result.error)
+                toast.error(result.error, { id: toastId })
+                setDeleteLoading(false)
+                return
+            }
+        } catch (e) {
+            console.error(e)
+            toast.error('删除失败，请稍后重试', { id: toastId })
             setDeleteLoading(false)
+            return
         }
-        // deleteSite 会自动 redirect
+
+        toast.success('已删除，正在跳转...', { id: toastId })
+        setDeleteConfirmOpen(false)
+        startTransition(() => {
+            router.replace('/sites')
+        })
     }
 
     return (
         <Dialog open={open} onOpenChange={(isOpen) => {
+            if (!isOpen && isBusy) return
             setOpen(isOpen)
             if (!isOpen) resetForm()
         }}>
@@ -153,7 +217,7 @@ export function EditSiteDialog({ site, trigger }: EditSiteDialogProps) {
                             onChange={(e) => setName(e.target.value)}
                             placeholder="我的个人主页"
                             required
-                            disabled={loading}
+                            disabled={isBusy}
                         />
                     </div>
 
@@ -174,7 +238,7 @@ export function EditSiteDialog({ site, trigger }: EditSiteDialogProps) {
                             value={description}
                             onChange={(e) => setDescription(e.target.value)}
                             placeholder="简单描述一下这个站点..."
-                            disabled={loading}
+                            disabled={isBusy}
                         />
                     </div>
 
@@ -192,7 +256,7 @@ export function EditSiteDialog({ site, trigger }: EditSiteDialogProps) {
                                 accept=".html,.htm"
                                 onChange={handleFileChange}
                                 className="hidden"
-                                disabled={loading}
+                                disabled={isBusy}
                             />
                             {file ? (
                                 <div className="flex items-center justify-center gap-2 text-primary">
@@ -222,13 +286,19 @@ export function EditSiteDialog({ site, trigger }: EditSiteDialogProps) {
                     )}
 
                     <div className="flex items-center justify-between pt-2">
-                        <AlertDialog>
+                        <AlertDialog
+                            open={deleteConfirmOpen}
+                            onOpenChange={(open) => {
+                                if (!open && isBusy) return
+                                setDeleteConfirmOpen(open)
+                            }}
+                        >
                             <AlertDialogTrigger asChild>
                                 <Button 
                                     type="button" 
                                     variant="destructive" 
                                     size="sm"
-                                    disabled={loading || deleteLoading}
+                                    disabled={isBusy}
                                 >
                                     <Trash2 className="mr-1 h-3 w-3" />
                                     删除站点
@@ -242,10 +312,11 @@ export function EditSiteDialog({ site, trigger }: EditSiteDialogProps) {
                                     </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
-                                    <AlertDialogCancel>取消</AlertDialogCancel>
+                                    <AlertDialogCancel disabled={isBusy}>取消</AlertDialogCancel>
                                     <AlertDialogAction 
                                         onClick={handleDelete}
                                         className="bg-destructive text-white hover:bg-destructive/90"
+                                        disabled={isBusy}
                                     >
                                         {deleteLoading ? (
                                             <>
@@ -265,13 +336,13 @@ export function EditSiteDialog({ site, trigger }: EditSiteDialogProps) {
                                 type="button" 
                                 variant="outline" 
                                 onClick={() => setOpen(false)}
-                                disabled={loading}
+                                disabled={isBusy}
                             >
                                 取消
                             </Button>
-                            <Button type="submit" disabled={loading}>
-                                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                {loading ? '保存中...' : '保存更改'}
+                            <Button type="submit" disabled={isBusy}>
+                                {isBusy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                {isBusy ? '保存中...' : '保存更改'}
                             </Button>
                         </div>
                     </div>

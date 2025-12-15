@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useCallback, useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Loader2, Eye, EyeOff } from 'lucide-react'
+import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -38,22 +39,41 @@ interface EditUserDialogProps {
 
 export function EditUserDialog({ user, trigger }: EditUserDialogProps) {
     const router = useRouter()
+    const [isRefreshing, startTransition] = useTransition()
     const [open, setOpen] = useState(false)
     const [loading, setLoading] = useState(false)
+    const [shouldCloseOnRefresh, setShouldCloseOnRefresh] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [showPassword, setShowPassword] = useState(false)
+    const toastIdRef = useRef<string | number | undefined>(undefined)
     
     const [fullName, setFullName] = useState(user.user_metadata?.full_name || '')
     const [newPassword, setNewPassword] = useState('')
     const [isAdmin, setIsAdmin] = useState(user.app_metadata?.role === 'admin')
 
-    const resetForm = () => {
+    const isBusy = loading || isRefreshing
+
+    const resetForm = useCallback(() => {
         setFullName(user.user_metadata?.full_name || '')
         setNewPassword('')
         setIsAdmin(user.app_metadata?.role === 'admin')
         setError(null)
         setShowPassword(false)
-    }
+    }, [user.app_metadata?.role, user.user_metadata?.full_name])
+
+    useEffect(() => {
+        if (!shouldCloseOnRefresh || isRefreshing) return
+
+        queueMicrotask(() => {
+            toast.success('保存成功', { id: toastIdRef.current })
+            toastIdRef.current = undefined
+
+            setOpen(false)
+            resetForm()
+            setLoading(false)
+            setShouldCloseOnRefresh(false)
+        })
+    }, [isRefreshing, resetForm, shouldCloseOnRefresh])
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault()
@@ -65,20 +85,34 @@ export function EditUserDialog({ user, trigger }: EditUserDialogProps) {
         formData.set('newPassword', newPassword)
         formData.set('isAdmin', isAdmin ? 'true' : 'false')
 
-        const result = await updateUser(user.id, formData)
+        toastIdRef.current = toast.loading('保存中...')
+        let result: Awaited<ReturnType<typeof updateUser>>
+        try {
+            result = await updateUser(user.id, formData)
+        } catch (error) {
+            console.error(error)
+            toast.error('保存失败，请稍后重试', { id: toastIdRef.current })
+            toastIdRef.current = undefined
+            setLoading(false)
+            return
+        }
 
         if (result?.error) {
             setError(result.error)
+            toast.error(result.error, { id: toastIdRef.current })
+            toastIdRef.current = undefined
             setLoading(false)
         } else if (result?.success) {
-            setOpen(false)
-            setLoading(false)
-            router.refresh()
+            setShouldCloseOnRefresh(true)
+            startTransition(() => {
+                router.refresh()
+            })
         }
     }
 
     return (
         <Dialog open={open} onOpenChange={(isOpen) => {
+            if (!isOpen && isBusy) return
             setOpen(isOpen)
             if (!isOpen) resetForm()
         }}>
@@ -111,7 +145,7 @@ export function EditUserDialog({ user, trigger }: EditUserDialogProps) {
                             placeholder="张三"
                             value={fullName}
                             onChange={(e) => setFullName(e.target.value)}
-                            disabled={loading}
+                            disabled={isBusy}
                         />
                     </div>
 
@@ -125,7 +159,7 @@ export function EditUserDialog({ user, trigger }: EditUserDialogProps) {
                                 value={newPassword}
                                 onChange={(e) => setNewPassword(e.target.value)}
                                 minLength={6}
-                                disabled={loading}
+                                disabled={isBusy}
                                 className="pr-10"
                             />
                             <Button
@@ -134,7 +168,7 @@ export function EditUserDialog({ user, trigger }: EditUserDialogProps) {
                                 size="icon"
                                 className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
                                 onClick={() => setShowPassword(!showPassword)}
-                                disabled={loading}
+                                disabled={isBusy}
                             >
                                 {showPassword ? (
                                     <EyeOff className="h-4 w-4 text-muted-foreground" />
@@ -151,7 +185,7 @@ export function EditUserDialog({ user, trigger }: EditUserDialogProps) {
                             id="isAdmin"
                             checked={isAdmin}
                             onCheckedChange={(checked) => setIsAdmin(checked === true)}
-                            disabled={loading}
+                            disabled={isBusy}
                         />
                         <Label 
                             htmlFor="isAdmin" 
@@ -172,13 +206,13 @@ export function EditUserDialog({ user, trigger }: EditUserDialogProps) {
                             type="button" 
                             variant="outline" 
                             onClick={() => setOpen(false)}
-                            disabled={loading}
+                            disabled={isBusy}
                         >
                             取消
                         </Button>
-                        <Button type="submit" disabled={loading}>
-                            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            {loading ? '保存中...' : '保存修改'}
+                        <Button type="submit" disabled={isBusy}>
+                            {isBusy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            {isBusy ? '保存中...' : '保存修改'}
                         </Button>
                     </div>
                 </form>
@@ -186,4 +220,3 @@ export function EditUserDialog({ user, trigger }: EditUserDialogProps) {
         </Dialog>
     )
 }
-

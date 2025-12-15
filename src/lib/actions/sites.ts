@@ -306,7 +306,7 @@ export async function deleteSite(siteId: string) {
 
     revalidatePath('/dashboard')
     revalidatePath('/sites')
-    redirect('/sites')
+    return { success: true }
 }
 
 export async function deleteSites(siteIds: string[]) {
