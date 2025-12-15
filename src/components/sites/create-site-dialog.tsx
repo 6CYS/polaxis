@@ -33,11 +33,10 @@ export function CreateSiteDialog({ trigger }: CreateSiteDialogProps) {
     const fileInputRef = useRef<HTMLInputElement>(null)
 
     const handleSlugChange = (value: string) => {
+        // 只保留字母、数字和短横线，其他字符直接过滤掉
         const formatted = value
             .toLowerCase()
-            .replace(/[^a-z0-9-]/g, '-')
-            .replace(/-+/g, '-')
-            .replace(/^-/, '') // 只去掉开头的短横线，保留结尾的以便继续输入
+            .replace(/[^a-z0-9-]/g, '')
         setSlug(formatted)
     }
 
