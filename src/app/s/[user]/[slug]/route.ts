@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminSupabaseClient } from '@/lib/supabase-server'
+import type { User } from '@supabase/supabase-js'
 
 export async function GET(
     request: NextRequest,
@@ -18,7 +19,7 @@ export async function GET(
     }
 
     // 查找匹配的用户（通过邮箱前缀或 ID 前8位）
-    const matchedUser = users.users.find(u => {
+    const matchedUser = users.users.find((u: User) => {
         if (u.email) {
             const emailPrefix = u.email.split('@')[0]
             return emailPrefix === user
