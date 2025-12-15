@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import Image from 'next/image'
 
 import { MobileNav } from '@/components/dashboard/mobile-nav'
@@ -15,7 +16,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
                 <div className="flex h-14 items-center px-4">
                     <div className="mr-4 hidden md:flex">
-                        <a className="mr-6 flex items-center space-x-2" href="/">
+                        <Link className="mr-6 flex items-center space-x-2" href="/">
                             <Image 
                                 src="/polaxis_logo.svg" 
                                 alt="Polaxis" 
@@ -26,13 +27,13 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                             <span className="font-bold">
                                 Polaxis
                             </span>
-                        </a>
+                        </Link>
                     </div>
 
                     <MobileNav />
 
                     {/* 移动端 Logo */}
-                    <a className="flex items-center space-x-2 md:hidden" href="/">
+                    <Link className="flex items-center space-x-2 md:hidden" href="/">
                         <Image 
                             src="/polaxis_logo.svg" 
                             alt="Polaxis" 
@@ -41,7 +42,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                             className="rounded-md"
                         />
                         <span className="font-bold">Polaxis</span>
-                    </a>
+                    </Link>
 
                     <div className="flex flex-1 items-center justify-between space-x-2 sm:space-x-4 md:justify-end">
                         <div className="w-full flex-1 md:w-auto md:flex-none">

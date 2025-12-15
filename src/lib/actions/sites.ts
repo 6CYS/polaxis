@@ -366,9 +366,10 @@ export async function deleteSites(siteIds: string[]) {
 export async function getSites() {
     const supabase = await createServerSupabaseClient()
     
-    const { data: { user } } = await supabase.auth.getUser()
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    const user = session?.user
     
-    if (!user) {
+    if (sessionError || !user) {
         return []
     }
 
@@ -386,12 +387,39 @@ export async function getSites() {
     return sites
 }
 
+export async function getSitesPageData() {
+    const supabase = await createServerSupabaseClient()
+    
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    const user = session?.user
+    
+    if (sessionError || !user) {
+        return { sites: [], username: 'user' }
+    }
+
+    const username = user.email ? user.email.split('@')[0] : user.id.substring(0, 8)
+
+    const { data: sites, error } = await supabase
+        .from('po_sites')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+
+    if (error) {
+        console.error('Get sites error:', error)
+        return { sites: [], username }
+    }
+
+    return { sites, username }
+}
+
 export async function getSite(siteId: string) {
     const supabase = await createServerSupabaseClient()
     
-    const { data: { user } } = await supabase.auth.getUser()
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    const user = session?.user
     
-    if (!user) {
+    if (sessionError || !user) {
         return null
     }
 
@@ -413,13 +441,13 @@ export async function checkFileExists(siteId: string) {
     const supabase = await createServerSupabaseClient()
     const adminClient = createAdminSupabaseClient()
     
-    const { data: { user } } = await supabase.auth.getUser()
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    const user = session?.user
     
-    if (!user) {
+    if (sessionError || !user) {
         return false
     }
 
-    const filePath = `${user.id}/${siteId}/index.html`
     const { data } = await adminClient.storage
         .from('sites')
         .list(`${user.id}/${siteId}`)
@@ -430,9 +458,10 @@ export async function checkFileExists(siteId: string) {
 export async function getCurrentUsername() {
     const supabase = await createServerSupabaseClient()
     
-    const { data: { user } } = await supabase.auth.getUser()
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    const user = session?.user
     
-    if (!user) {
+    if (sessionError || !user) {
         return 'user'
     }
 
@@ -443,5 +472,3 @@ export async function getCurrentUsername() {
     
     return user.id.substring(0, 8)
 }
-
-

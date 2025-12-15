@@ -20,21 +20,38 @@ export function UserNav() {
     const [userEmail, setUserEmail] = useState<string | null>(null)
 
     useEffect(() => {
-        const getUser = async () => {
-            const { data: { user } } = await supabase.auth.getUser()
-            if (user) {
-                setUserEmail(user.email || 'User')
-            }
+        let isActive = true
+
+        const updateFromSession = (sessionUser: { email?: string | null } | null) => {
+            if (!isActive) return
+            setUserEmail(sessionUser?.email ?? null)
         }
-        getUser()
+
+        const init = async () => {
+            const { data: { session } } = await supabase.auth.getSession()
+            updateFromSession(session?.user ?? null)
+        }
+
+        void init()
+
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+            updateFromSession(session?.user ?? null)
+        })
+
+        return () => {
+            isActive = false
+            subscription.unsubscribe()
+        }
     }, [])
 
     const handleSignOut = async () => {
         setLoading(true)
-        await supabase.auth.signOut()
-        router.refresh()
-        router.replace('/login')
-        setLoading(false)
+        try {
+            await supabase.auth.signOut()
+            router.replace('/login')
+        } finally {
+            setLoading(false)
+        }
     }
 
     return (

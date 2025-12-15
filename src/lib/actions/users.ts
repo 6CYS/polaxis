@@ -22,9 +22,10 @@ interface User {
 // 检查当前用户是否为管理员
 async function checkIsAdmin() {
     const supabase = await createServerSupabaseClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    const user = session?.user
     
-    if (!user) {
+    if (sessionError || !user) {
         return { isAdmin: false, error: '请先登录' }
     }
     
@@ -266,4 +267,3 @@ export async function deleteUsers(userIds: string[]): Promise<{ success?: boolea
     revalidatePath('/users')
     return { success: true, count: deletedCount }
 }
-

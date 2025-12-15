@@ -16,20 +16,35 @@ interface RouteItem {
     href: string
 }
 
-interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> { }
+type SidebarProps = React.HTMLAttributes<HTMLDivElement>
 
 export function Sidebar({ className }: SidebarProps) {
     const pathname = usePathname()
     const [isAdmin, setIsAdmin] = useState(false)
 
     useEffect(() => {
-        const checkAdminStatus = async () => {
-            const { data: { user } } = await supabase.auth.getUser()
-            if (user?.app_metadata?.role === 'admin') {
-                setIsAdmin(true)
-            }
+        let isActive = true
+
+        const updateFromSession = (sessionUser: { app_metadata?: { role?: string } } | null) => {
+            if (!isActive) return
+            setIsAdmin(sessionUser?.app_metadata?.role === 'admin')
         }
-        checkAdminStatus()
+
+        const init = async () => {
+            const { data: { session } } = await supabase.auth.getSession()
+            updateFromSession(session?.user ?? null)
+        }
+
+        void init()
+
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+            updateFromSession(session?.user ?? null)
+        })
+
+        return () => {
+            isActive = false
+            subscription.unsubscribe()
+        }
     }, [])
 
     // 所有用户可见的路由

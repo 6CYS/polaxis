@@ -8,9 +8,10 @@ import { Card, CardContent } from '@/components/ui/card'
 
 export default async function UsersPage() {
     const supabase = await createServerSupabaseClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    const user = session?.user
     
-    if (!user) {
+    if (sessionError || !user) {
         redirect('/login')
     }
     
@@ -69,4 +70,3 @@ export default async function UsersPage() {
         <UsersList users={users} currentUserId={user.id} />
     )
 }
-
