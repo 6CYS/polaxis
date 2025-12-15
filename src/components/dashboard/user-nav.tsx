@@ -1,6 +1,6 @@
 'use client'
 
-import { Loader2, LogOut } from 'lucide-react'
+import { Loader2, LogOut, KeyRound } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 
@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Separator } from '@/components/ui/separator'
 import { supabase } from '@/lib/supabase'
+import { ChangePasswordDialog } from './change-password-dialog'
 
 export function UserNav() {
     const router = useRouter()
@@ -72,11 +73,19 @@ export function UserNav() {
                         </p>
                     </div>
                     <Separator />
-                    <Button 
-                        variant="ghost" 
-                        size="sm" 
+                    <ChangePasswordDialog
+                        trigger={
+                            <Button variant="ghost" size="sm" className="w-full justify-start">
+                                <KeyRound className="mr-2 h-4 w-4" />
+                                <span>修改密码</span>
+                            </Button>
+                        }
+                    />
+                    <Button
+                        variant="ghost"
+                        size="sm"
                         className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10"
-                        onClick={handleSignOut} 
+                        onClick={handleSignOut}
                         disabled={loading}
                     >
                         {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <LogOut className="mr-2 h-4 w-4" />}

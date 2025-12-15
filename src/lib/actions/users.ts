@@ -220,6 +220,55 @@ export async function deleteUser(userId: string): Promise<{ success?: boolean, e
     return { success: true }
 }
 
+// 用户自己修改密码
+export async function changePassword(formData: FormData): Promise<{ success?: boolean, error?: string }> {
+    const supabase = await createServerSupabaseClient()
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+
+    if (sessionError || !session?.user) {
+        return { error: '请先登录' }
+    }
+
+    const currentPassword = formData.get('currentPassword') as string
+    const newPassword = formData.get('newPassword') as string
+    const confirmPassword = formData.get('confirmPassword') as string
+
+    // 验证输入
+    if (!currentPassword || !newPassword || !confirmPassword) {
+        return { error: '所有字段都必须填写' }
+    }
+
+    if (newPassword.length < 6) {
+        return { error: '新密码长度至少 6 位' }
+    }
+
+    if (newPassword !== confirmPassword) {
+        return { error: '两次输入的新密码不一致' }
+    }
+
+    // 验证当前密码是否正确（通过重新登录验证）
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: session.user.email!,
+        password: currentPassword,
+    })
+
+    if (signInError) {
+        return { error: '当前密码错误' }
+    }
+
+    // 更新密码
+    const { error: updateError } = await supabase.auth.updateUser({
+        password: newPassword,
+    })
+
+    if (updateError) {
+        console.error('Change password error:', updateError)
+        return { error: updateError.message || '修改密码失败' }
+    }
+
+    return { success: true }
+}
+
 // 批量删除用户
 export async function deleteUsers(userIds: string[]): Promise<{ success?: boolean, error?: string, count?: number }> {
     const { isAdmin, error, userId: currentUserId } = await checkIsAdmin()
