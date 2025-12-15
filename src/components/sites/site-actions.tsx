@@ -1,6 +1,6 @@
 'use client'
 
-import { ExternalLink, Pencil } from 'lucide-react'
+import { Pencil } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { EditSiteDialog } from '@/components/sites/edit-site-dialog'
 import { Site } from '@/lib/database.types'
@@ -10,23 +10,9 @@ interface SiteActionsProps {
     username: string
 }
 
-export function SiteActions({ site, username }: SiteActionsProps) {
-    const siteUrl = `/s/${username}/${site.slug}`
-
-    const handleView = () => {
-        window.open(siteUrl, '_blank')
-    }
-
+export function SiteActions({ site }: SiteActionsProps) {
     return (
-        <div className="flex items-center justify-center gap-1">
-            <Button 
-                variant="ghost" 
-                size="sm"
-                onClick={handleView}
-            >
-                <ExternalLink className="mr-1 h-3 w-3" />
-                查看
-            </Button>
+        <div className="flex items-center justify-center">
             <EditSiteDialog 
                 site={site}
                 trigger={
