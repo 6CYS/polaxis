@@ -8,9 +8,10 @@ import { SiteInsert } from '@/lib/database.types'
 export async function createSite(formData: FormData) {
     const supabase = await createServerSupabaseClient()
     
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    const user = session?.user
     
-    if (authError || !user) {
+    if (sessionError || !user) {
         return { error: '请先登录' }
     }
 
@@ -63,9 +64,10 @@ export async function createSiteWithFile(formData: FormData) {
     const supabase = await createServerSupabaseClient()
     const adminClient = createAdminSupabaseClient()
     
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    const user = session?.user
     
-    if (authError || !user) {
+    if (sessionError || !user) {
         return { error: '请先登录' }
     }
 
@@ -150,9 +152,10 @@ export async function createSiteWithFile(formData: FormData) {
 export async function updateSite(siteId: string, formData: FormData) {
     const supabase = await createServerSupabaseClient()
     
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    const user = session?.user
     
-    if (authError || !user) {
+    if (sessionError || !user) {
         return { error: '请先登录' }
     }
 
@@ -201,9 +204,10 @@ export async function uploadSiteFile(siteId: string, formData: FormData) {
     const supabase = await createServerSupabaseClient()
     const adminClient = createAdminSupabaseClient()
     
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    const user = session?.user
     
-    if (authError || !user) {
+    if (sessionError || !user) {
         return { error: '请先登录' }
     }
 
@@ -259,9 +263,10 @@ export async function deleteSite(siteId: string) {
     const supabase = await createServerSupabaseClient()
     const adminClient = createAdminSupabaseClient()
     
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    const user = session?.user
     
-    if (authError || !user) {
+    if (sessionError || !user) {
         return { error: '请先登录' }
     }
 
@@ -308,9 +313,10 @@ export async function deleteSites(siteIds: string[]) {
     const supabase = await createServerSupabaseClient()
     const adminClient = createAdminSupabaseClient()
     
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    const user = session?.user
     
-    if (authError || !user) {
+    if (sessionError || !user) {
         return { error: '请先登录' }
     }
 
@@ -375,7 +381,7 @@ export async function getSites() {
 
     const { data: sites, error } = await supabase
         .from('po_sites')
-        .select('*')
+        .select('id,user_id,name,slug,description,created_at,updated_at')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
 
@@ -385,6 +391,31 @@ export async function getSites() {
     }
 
     return sites
+}
+
+export async function getDashboardSitesData() {
+    const supabase = await createServerSupabaseClient()
+
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    const user = session?.user
+
+    if (sessionError || !user) {
+        return { totalCount: 0, recentSites: [] }
+    }
+
+    const { data: recentSites, count, error } = await supabase
+        .from('po_sites')
+        .select('id,user_id,name,slug,description,created_at,updated_at', { count: 'exact' })
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(5)
+
+    if (error) {
+        console.error('Get dashboard sites error:', error)
+        return { totalCount: 0, recentSites: [] }
+    }
+
+    return { totalCount: count ?? 0, recentSites: recentSites ?? [] }
 }
 
 export async function getSitesPageData() {
@@ -401,7 +432,7 @@ export async function getSitesPageData() {
 
     const { data: sites, error } = await supabase
         .from('po_sites')
-        .select('*')
+        .select('id,user_id,name,slug,description,created_at,updated_at')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
 

@@ -54,6 +54,7 @@ export default function LoginPage() {
         console.log('Login form submitted', values.email)
         setLoading(true)
         setError(null)
+        let didNavigate = false
 
         try {
             console.log('Calling signInWithPassword...')
@@ -69,13 +70,16 @@ export default function LoginPage() {
             }
 
             console.log('Login successful, redirecting...')
-            router.push('/dashboard')
-            router.refresh()
-        } catch (err: any) {
+            didNavigate = true
+            router.replace('/dashboard')
+        } catch (err: unknown) {
             console.error('Catch block error:', err)
-            setError(err.message === 'Invalid login credentials' ? '账号或密码错误' : err.message)
+            const message = err instanceof Error ? err.message : '登录失败，请稍后重试'
+            setError(message === 'Invalid login credentials' ? '账号或密码错误' : message)
         } finally {
-            setLoading(false)
+            if (!didNavigate) {
+                setLoading(false)
+            }
         }
     }
 

@@ -9,18 +9,25 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card'
-import { getSites } from '@/lib/actions/sites'
+import { getDashboardSitesData } from '@/lib/actions/sites'
 import { CreateSiteDialog } from '@/components/sites/create-site-dialog'
 
+function hashToVisits(value: string) {
+    let hash = 0
+    for (let i = 0; i < value.length; i++) {
+        hash = (hash * 31 + value.charCodeAt(i)) | 0
+    }
+    return (Math.abs(hash) % 500) + 100
+}
+
 export default async function DashboardPage() {
-    const sites = await getSites()
-    const recentSites = sites.slice(0, 5)
+    const { totalCount, recentSites } = await getDashboardSitesData()
 
     // 模拟统计数据（后续可替换为真实数据）
     const stats = {
         totalVisits: 12847,
         monthlyVisits: 3256,
-        activeSites: Math.max(sites.length, 3),
+        activeSites: Math.max(totalCount, 3),
         avgLoadTime: '0.8s',
     }
 
@@ -78,7 +85,7 @@ export default async function DashboardPage() {
                         </div>
                     </CardHeader>
                     <CardContent className="px-3 pt-0 pb-2">
-                        <div className="text-2xl font-bold">{sites.length}</div>
+                        <div className="text-2xl font-bold">{totalCount}</div>
                         <p className="text-xs text-muted-foreground">个站点已创建</p>
                     </CardContent>
                 </Card>
@@ -147,7 +154,7 @@ export default async function DashboardPage() {
                             您最近创建的站点一览
                         </CardDescription>
                     </div>
-                    {sites.length > 0 && (
+                    {totalCount > 0 && (
                         <Button variant="ghost" size="sm" asChild>
                             <Link href="/sites">
                                 查看全部
@@ -157,7 +164,7 @@ export default async function DashboardPage() {
                     )}
                 </CardHeader>
                 <CardContent className="p-4 pt-0">
-                    {sites.length === 0 ? (
+                    {totalCount === 0 ? (
                         <div className="flex flex-col items-center justify-center py-8 text-center">
                             <div className="p-3 rounded-full bg-muted mb-3">
                                 <Globe className="h-8 w-8 text-muted-foreground" />
@@ -182,6 +189,7 @@ export default async function DashboardPage() {
                                         <div>
                                             <Link
                                                 href={`/sites/${site.id}`}
+                                                prefetch={false}
                                                 className="text-sm font-medium hover:text-violet-600 dark:hover:text-violet-400 transition-colors"
                                             >
                                                 {site.name}
@@ -194,7 +202,7 @@ export default async function DashboardPage() {
                                     <div className="flex items-center gap-4">
                                         <div className="text-right hidden sm:block">
                                             <div className="text-xs font-medium">
-                                                {Math.floor(Math.random() * 500 + 100)} 次访问
+                                                {hashToVisits(site.id)} 次访问
                                             </div>
                                             <div className="text-xs text-muted-foreground">本月</div>
                                         </div>
