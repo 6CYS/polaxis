@@ -25,7 +25,7 @@ export function Sidebar({ className }: SidebarProps) {
     useEffect(() => {
         let isActive = true
 
-        const updateFromSession = (sessionUser: { app_metadata?: { role?: string } } | null) => {
+        const updateFromSession = (sessionUser: { app_metadata: Record<string, unknown> } | null) => {
             if (!isActive) return
             setIsAdmin(sessionUser?.app_metadata?.role === 'admin')
         }
