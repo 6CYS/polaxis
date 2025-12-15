@@ -15,7 +15,7 @@ export async function updateSession(request: NextRequest) {
                     return request.cookies.getAll()
                 },
                 setAll(cookiesToSet) {
-                    cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value))
+                    cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
                     supabaseResponse = NextResponse.next({
                         request,
                     })
@@ -27,10 +27,23 @@ export async function updateSession(request: NextRequest) {
         }
     )
 
-    // refresh session if expired
-    const {
-        data: { user },
-    } = await supabase.auth.getUser()
+    // 尝试获取用户信息，添加错误处理
+    let user = null
+    try {
+        const { data } = await supabase.auth.getUser()
+        user = data.user
+    } catch (error) {
+        // 在 Edge Runtime 中可能会遇到网络问题，优雅降级
+        console.warn('Middleware: Failed to get user session, continuing without auth check')
+        // 检查是否有 session cookie 作为备用判断
+        const hasSessionCookie = request.cookies.getAll().some(
+            cookie => cookie.name.includes('sb-') && cookie.name.includes('-auth-token')
+        )
+        if (hasSessionCookie) {
+            // 有 cookie 但获取失败，让请求继续，由页面级别处理
+            return supabaseResponse
+        }
+    }
 
     // ROUTE PROTECTION LOGIC
 

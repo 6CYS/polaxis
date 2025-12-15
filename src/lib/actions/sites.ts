@@ -59,6 +59,94 @@ export async function createSite(formData: FormData) {
     redirect(`/dashboard/sites/${data.id}`)
 }
 
+export async function createSiteWithFile(formData: FormData) {
+    const supabase = await createServerSupabaseClient()
+    const adminClient = createAdminSupabaseClient()
+    
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    
+    if (authError || !user) {
+        return { error: '请先登录' }
+    }
+
+    const name = formData.get('name') as string
+    const slug = formData.get('slug') as string
+    const description = formData.get('description') as string | null
+    const file = formData.get('file') as File
+
+    if (!file || !(file instanceof File)) {
+        return { error: '请上传 HTML 文件' }
+    }
+
+    // 验证文件类型
+    if (!file.name.endsWith('.html') && !file.name.endsWith('.htm')) {
+        return { error: '只支持 .html 或 .htm 文件' }
+    }
+
+    // 验证文件大小
+    if (file.size > 5 * 1024 * 1024) {
+        return { error: '文件大小不能超过 5MB' }
+    }
+
+    // 验证 slug 格式
+    const slugRegex = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
+    if (!slugRegex.test(slug)) {
+        return { error: 'Slug 只能包含小写字母、数字和连字符' }
+    }
+
+    // 检查 slug 是否已存在（同一用户下）
+    const { data: existingSite } = await supabase
+        .from('po_sites')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('slug', slug)
+        .single()
+
+    if (existingSite) {
+        return { error: '此 Slug 已被使用，请换一个' }
+    }
+
+    const siteData: SiteInsert = {
+        user_id: user.id,
+        name,
+        slug,
+        description: description || null,
+    }
+
+    // 创建站点记录
+    const { data: site, error: createError } = await supabase
+        .from('po_sites')
+        .insert(siteData)
+        .select()
+        .single()
+
+    if (createError || !site) {
+        console.error('Create site error:', createError)
+        return { error: '创建站点失败，请稍后重试' }
+    }
+
+    // 上传文件到 Storage
+    const filePath = `${user.id}/${site.id}/index.html`
+    const { error: uploadError } = await adminClient.storage
+        .from('sites')
+        .upload(filePath, file, {
+            contentType: 'text/html',
+            upsert: true,
+        })
+
+    if (uploadError) {
+        console.error('Upload file error:', uploadError)
+        // 如果上传失败，删除刚创建的站点记录
+        await supabase.from('po_sites').delete().eq('id', site.id)
+        return { error: '文件上传失败，请稍后重试' }
+    }
+
+    revalidatePath('/dashboard')
+    revalidatePath('/dashboard/sites')
+    
+    return { success: true, siteId: site.id }
+}
+
 export async function deleteSite(siteId: string) {
     const supabase = await createServerSupabaseClient()
     const adminClient = createAdminSupabaseClient()
