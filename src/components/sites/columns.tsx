@@ -1,30 +1,73 @@
 "use client"
 
 import { ColumnDef } from "@tanstack/react-table"
-import Link from "next/link"
 import { Globe, ExternalLink } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { Site } from "@/lib/database.types"
 import { SiteActions } from "@/components/sites/site-actions"
 
 export function createColumns(username: string): ColumnDef<Site>[] {
     return [
         {
+            id: "select",
+            header: ({ table }) => (
+                <Checkbox
+                    checked={
+                        table.getIsAllPageRowsSelected() ||
+                        (table.getIsSomePageRowsSelected() && "indeterminate")
+                    }
+                    onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+                    aria-label="全选"
+                />
+            ),
+            cell: ({ row }) => (
+                <Checkbox
+                    checked={row.getIsSelected()}
+                    onCheckedChange={(value) => row.toggleSelected(!!value)}
+                    aria-label="选择行"
+                />
+            ),
+            enableSorting: false,
+            enableHiding: false,
+        },
+        {
             accessorKey: "name",
             header: "站点名称",
             cell: ({ row }) => {
                 const site = row.original
-                return (
-                    <Link
-                        href={`/sites/${site.id}`}
-                        className="flex items-center gap-3 hover:underline"
-                    >
+                const displayName = site.name.length > 12 ? `${site.name.slice(0, 12)}...` : site.name
+                
+                const content = (
+                    <div className="flex items-center gap-3">
                         <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
                             <Globe className="h-4 w-4 text-primary" />
                         </div>
-                        <span className="font-medium">{site.name}</span>
-                    </Link>
+                        <span className="font-medium">{displayName}</span>
+                    </div>
+                )
+
+                return (
+                    <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                {content}
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-xs">
+                                <p className="font-medium">{site.name}</p>
+                                {site.description && (
+                                    <p className="text-muted-foreground text-sm mt-1">{site.description}</p>
+                                )}
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
                 )
             },
         },
@@ -59,18 +102,6 @@ export function createColumns(username: string): ColumnDef<Site>[] {
                             <ExternalLink className="h-3.5 w-3.5" />
                         </Button>
                     </div>
-                )
-            },
-        },
-        {
-            accessorKey: "description",
-            header: "描述",
-            cell: ({ row }) => {
-                const description = row.getValue("description") as string | null
-                return (
-                    <span className="text-muted-foreground text-sm line-clamp-1 max-w-[200px]">
-                        {description || "—"}
-                    </span>
                 )
             },
         },

@@ -26,8 +26,10 @@ export function CreateSiteDialog({ trigger }: CreateSiteDialogProps) {
     const [open, setOpen] = useState(false)
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
+    const [name, setName] = useState('')
     const [slug, setSlug] = useState('')
     const [file, setFile] = useState<File | null>(null)
+    const [isDragging, setIsDragging] = useState(false)
     const fileInputRef = useRef<HTMLInputElement>(null)
 
     const handleSlugChange = (value: string) => {
@@ -35,30 +37,85 @@ export function CreateSiteDialog({ trigger }: CreateSiteDialogProps) {
             .toLowerCase()
             .replace(/[^a-z0-9-]/g, '-')
             .replace(/-+/g, '-')
-            .replace(/^-|-$/g, '')
+            .replace(/^-/, '') // 只去掉开头的短横线，保留结尾的以便继续输入
         setSlug(formatted)
+    }
+
+    // 从文件名生成站点名称和 slug
+    const generateNameFromFile = (fileName: string) => {
+        // 去掉 .html 或 .htm 后缀
+        const nameWithoutExt = fileName.replace(/\.(html|htm)$/i, '')
+        return nameWithoutExt
+    }
+
+    const generateSlugFromName = (siteName: string) => {
+        return siteName
+            .toLowerCase()
+            .replace(/[^a-z0-9\u4e00-\u9fa5-]/g, '-') // 保留中文、字母、数字和连字符
+            .replace(/[\u4e00-\u9fa5]/g, '') // 移除中文字符（slug 只能是英文）
+            .replace(/-+/g, '-')
+            .replace(/^-|-$/g, '')
+    }
+
+    const processFile = (selectedFile: File) => {
+        if (!selectedFile.name.endsWith('.html') && !selectedFile.name.endsWith('.htm')) {
+            setError('请上传 .html 或 .htm 文件')
+            return
+        }
+        if (selectedFile.size > 5 * 1024 * 1024) {
+            setError('文件大小不能超过 5MB')
+            return
+        }
+        
+        setFile(selectedFile)
+        setError(null)
+
+        // 自动填充站点名称和 slug
+        const siteName = generateNameFromFile(selectedFile.name)
+        setName(siteName)
+        
+        const siteSlug = generateSlugFromName(siteName)
+        if (siteSlug) {
+            setSlug(siteSlug)
+        }
     }
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const selectedFile = e.target.files?.[0]
         if (selectedFile) {
-            if (!selectedFile.name.endsWith('.html') && !selectedFile.name.endsWith('.htm')) {
-                setError('请上传 .html 或 .htm 文件')
-                return
-            }
-            if (selectedFile.size > 5 * 1024 * 1024) {
-                setError('文件大小不能超过 5MB')
-                return
-            }
-            setFile(selectedFile)
-            setError(null)
+            processFile(selectedFile)
+        }
+    }
+
+    const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+        e.preventDefault()
+        e.stopPropagation()
+        setIsDragging(true)
+    }
+
+    const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+        e.preventDefault()
+        e.stopPropagation()
+        setIsDragging(false)
+    }
+
+    const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+        e.preventDefault()
+        e.stopPropagation()
+        setIsDragging(false)
+
+        const droppedFile = e.dataTransfer.files?.[0]
+        if (droppedFile) {
+            processFile(droppedFile)
         }
     }
 
     const resetForm = () => {
+        setName('')
         setSlug('')
         setFile(null)
         setError(null)
+        setIsDragging(false)
         if (fileInputRef.current) {
             fileInputRef.current.value = ''
         }
@@ -73,6 +130,7 @@ export function CreateSiteDialog({ trigger }: CreateSiteDialogProps) {
         setLoading(true)
         setError(null)
 
+        formData.set('name', name)
         formData.set('slug', slug)
         formData.set('file', file)
 
@@ -86,9 +144,6 @@ export function CreateSiteDialog({ trigger }: CreateSiteDialogProps) {
             resetForm()
             setLoading(false)
             router.refresh()
-            if (result.siteId) {
-                router.push(`/sites/${result.siteId}`)
-            }
         }
     }
 
@@ -109,23 +164,66 @@ export function CreateSiteDialog({ trigger }: CreateSiteDialogProps) {
                 <DialogHeader>
                     <DialogTitle>创建新站点</DialogTitle>
                     <DialogDescription>
-                        填写站点信息并上传 HTML 文件
+                        拖拽 HTML 文件到下方区域，或点击选择文件
                     </DialogDescription>
                 </DialogHeader>
                 <form action={handleSubmit} className="space-y-4">
+                    {/* 拖拽上传区域 */}
+                    <div className="space-y-2">
+                        <Label>HTML 文件 <span className="text-red-500">*</span></Label>
+                        <div 
+                            className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
+                                isDragging 
+                                    ? 'border-primary bg-primary/10' 
+                                    : file 
+                                        ? 'border-primary bg-primary/5' 
+                                        : 'border-muted-foreground/25 hover:border-primary/50'
+                            }`}
+                            onClick={() => fileInputRef.current?.click()}
+                            onDragOver={handleDragOver}
+                            onDragLeave={handleDragLeave}
+                            onDrop={handleDrop}
+                        >
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept=".html,.htm"
+                                onChange={handleFileChange}
+                                className="hidden"
+                                disabled={loading}
+                            />
+                            {file ? (
+                                <div className="flex items-center justify-center gap-2 text-primary">
+                                    <FileCode className="h-5 w-5" />
+                                    <span className="font-medium">{file.name}</span>
+                                </div>
+                            ) : (
+                                <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                                    <Upload className={`h-10 w-10 ${isDragging ? 'text-primary' : ''}`} />
+                                    <span className="text-sm font-medium">
+                                        {isDragging ? '松开鼠标上传文件' : '拖拽文件到此处，或点击选择'}
+                                    </span>
+                                    <span className="text-xs">支持 .html 和 .htm，最大 5MB</span>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
                     <div className="space-y-2">
                         <Label htmlFor="name">站点名称</Label>
                         <Input
                             id="name"
                             name="name"
                             placeholder="我的个人主页"
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
                             required
                             disabled={loading}
                         />
                     </div>
 
                     <div className="space-y-2">
-                        <Label htmlFor="slug">URL Slug</Label>
+                        <Label htmlFor="slug">别名 (Slug)</Label>
                         <Input
                             id="slug"
                             name="slug"
@@ -148,37 +246,6 @@ export function CreateSiteDialog({ trigger }: CreateSiteDialogProps) {
                             placeholder="简单描述一下这个站点..."
                             disabled={loading}
                         />
-                    </div>
-
-                    <div className="space-y-2">
-                        <Label>HTML 文件 <span className="text-red-500">*</span></Label>
-                        <div 
-                            className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors ${
-                                file ? 'border-primary bg-primary/5' : 'border-muted-foreground/25 hover:border-primary/50'
-                            }`}
-                            onClick={() => fileInputRef.current?.click()}
-                        >
-                            <input
-                                ref={fileInputRef}
-                                type="file"
-                                accept=".html,.htm"
-                                onChange={handleFileChange}
-                                className="hidden"
-                                disabled={loading}
-                            />
-                            {file ? (
-                                <div className="flex items-center justify-center gap-2 text-primary">
-                                    <FileCode className="h-5 w-5" />
-                                    <span className="font-medium">{file.name}</span>
-                                </div>
-                            ) : (
-                                <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                                    <Upload className="h-8 w-8" />
-                                    <span className="text-sm">点击上传 HTML 文件</span>
-                                    <span className="text-xs">支持 .html 和 .htm，最大 5MB</span>
-                                </div>
-                            )}
-                        </div>
                     </div>
 
                     {error && (
@@ -206,4 +273,3 @@ export function CreateSiteDialog({ trigger }: CreateSiteDialogProps) {
         </Dialog>
     )
 }
-

@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { RowSelectionState } from '@tanstack/react-table'
 import { 
     Globe, 
     LayoutGrid, 
@@ -10,7 +11,8 @@ import {
     Calendar,
     Clock,
     ExternalLink,
-    Pencil
+    Pencil,
+    Trash2
 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -20,10 +22,28 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card'
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from '@/components/ui/tooltip'
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
 import { DataTable } from '@/components/ui/data-table'
 import { createColumns } from '@/components/sites/columns'
 import { CreateSiteDialog } from '@/components/sites/create-site-dialog'
 import { EditSiteDialog } from '@/components/sites/edit-site-dialog'
+import { deleteSites } from '@/lib/actions/sites'
 import { Site } from '@/lib/database.types'
 
 interface SitesListProps {
@@ -34,8 +54,40 @@ interface SitesListProps {
 type ViewMode = 'list' | 'card'
 
 export function SitesList({ sites, username }: SitesListProps) {
+    const router = useRouter()
     const [viewMode, setViewMode] = useState<ViewMode>('list')
+    const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
+    const [isDeleting, setIsDeleting] = useState(false)
     const columns = createColumns(username)
+
+    // 获取选中的站点 ID
+    const selectedSiteIds = Object.keys(rowSelection)
+        .filter(key => rowSelection[key])
+        .map(index => sites[parseInt(index)]?.id)
+        .filter(Boolean) as string[]
+
+    const selectedCount = selectedSiteIds.length
+
+    const handleBatchDelete = async () => {
+        if (selectedSiteIds.length === 0) return
+
+        setIsDeleting(true)
+        try {
+            const result = await deleteSites(selectedSiteIds)
+            if (result.error) {
+                console.error('Delete sites error:', result.error)
+                alert(result.error)
+            } else {
+                setRowSelection({})
+                router.refresh()
+            }
+        } catch (error) {
+            console.error('Delete sites error:', error)
+            alert('删除失败，请稍后重试')
+        } finally {
+            setIsDeleting(false)
+        }
+    }
 
     if (sites.length === 0) {
         return (
@@ -61,9 +113,38 @@ export function SitesList({ sites, username }: SitesListProps) {
 
     return (
         <div className="space-y-4">
-            {/* 工具栏：创建按钮 + 视图切换 */}
+            {/* 工具栏：创建按钮 + 批量操作 + 视图切换 */}
             <div className="flex items-center justify-between">
-                <CreateSiteDialog />
+                <div className="flex items-center gap-2">
+                    <CreateSiteDialog />
+                    {selectedCount > 0 && (
+                        <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button variant="destructive" size="sm" disabled={isDeleting}>
+                                    <Trash2 className="h-4 w-4 mr-1.5" />
+                                    删除 ({selectedCount})
+                                </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>确认删除</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        您确定要删除选中的 {selectedCount} 个站点吗？此操作不可撤销，站点的所有数据和文件都将被永久删除。
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>取消</AlertDialogCancel>
+                                    <AlertDialogAction
+                                        onClick={handleBatchDelete}
+                                        className="bg-destructive text-white hover:bg-destructive/90"
+                                    >
+                                        {isDeleting ? '删除中...' : '确认删除'}
+                                    </AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+                    )}
+                </div>
                 <div className="inline-flex items-center rounded-lg border p-1 bg-muted/50">
                     <Button
                         variant={viewMode === 'list' ? 'secondary' : 'ghost'}
@@ -88,7 +169,12 @@ export function SitesList({ sites, username }: SitesListProps) {
 
             {/* 列表视图 - 使用 DataTable */}
             {viewMode === 'list' && (
-                <DataTable columns={columns} data={sites} />
+                <DataTable
+                    columns={columns}
+                    data={sites}
+                    rowSelection={rowSelection}
+                    onRowSelectionChange={setRowSelection}
+                />
             )}
 
             {/* 卡片视图 */}
@@ -99,21 +185,31 @@ export function SitesList({ sites, username }: SitesListProps) {
                         return (
                             <Card key={site.id} className="group hover:shadow-md transition-all hover:border-primary/20">
                                 <CardHeader className="pb-3">
-                                    <div className="flex items-start justify-between">
-                                        <div className="flex items-center gap-3">
+                                    <div className="flex items-start justify-between gap-2">
+                                        <div className="flex items-center gap-3 min-w-0 flex-1">
                                             <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
                                                 <Globe className="h-5 w-5 text-primary" />
                                             </div>
-                                            <div className="space-y-1 min-w-0">
-                                                <CardTitle className="text-base truncate">
-                                                    <Link 
-                                                        href={`/sites/${site.id}`}
-                                                        className="hover:underline"
-                                                    >
+                                            <div className="space-y-1 min-w-0 flex-1">
+                                                {site.name.length > 12 ? (
+                                                    <TooltipProvider>
+                                                        <Tooltip>
+                                                            <TooltipTrigger asChild>
+                                                                <CardTitle className="text-base cursor-default">
+                                                                    {site.name.slice(0, 12)}...
+                                                                </CardTitle>
+                                                            </TooltipTrigger>
+                                                            <TooltipContent>
+                                                                <p>{site.name}</p>
+                                                            </TooltipContent>
+                                                        </Tooltip>
+                                                    </TooltipProvider>
+                                                ) : (
+                                                    <CardTitle className="text-base cursor-default">
                                                         {site.name}
-                                                    </Link>
-                                                </CardTitle>
-                                                <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">
+                                                    </CardTitle>
+                                                )}
+                                                <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono block truncate">
                                                     /{site.slug}
                                                 </code>
                                             </div>
@@ -149,9 +245,24 @@ export function SitesList({ sites, username }: SitesListProps) {
                                     </div>
 
                                     {/* 描述 */}
-                                    <p className="text-sm text-muted-foreground line-clamp-2 min-h-[2.5rem]">
-                                        {site.description || '暂无描述'}
-                                    </p>
+                                    {site.description && site.description.length > 30 ? (
+                                        <TooltipProvider>
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <p className="text-sm text-muted-foreground cursor-default min-h-[2.5rem]">
+                                                        {site.description.slice(0, 30)}...
+                                                    </p>
+                                                </TooltipTrigger>
+                                                <TooltipContent className="max-w-xs">
+                                                    <p>{site.description}</p>
+                                                </TooltipContent>
+                                            </Tooltip>
+                                        </TooltipProvider>
+                                    ) : (
+                                        <p className="text-sm text-muted-foreground min-h-[2.5rem]">
+                                            {site.description || '暂无描述'}
+                                        </p>
+                                    )}
 
                                     {/* 时间信息 */}
                                     <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t">

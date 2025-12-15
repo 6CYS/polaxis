@@ -304,6 +304,65 @@ export async function deleteSite(siteId: string) {
     redirect('/sites')
 }
 
+export async function deleteSites(siteIds: string[]) {
+    const supabase = await createServerSupabaseClient()
+    const adminClient = createAdminSupabaseClient()
+    
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    
+    if (authError || !user) {
+        return { error: '请先登录' }
+    }
+
+    if (!siteIds || siteIds.length === 0) {
+        return { error: '请选择要删除的站点' }
+    }
+
+    // 验证所有站点都属于当前用户
+    const { data: sites, error: fetchError } = await supabase
+        .from('po_sites')
+        .select('id')
+        .eq('user_id', user.id)
+        .in('id', siteIds)
+
+    if (fetchError) {
+        return { error: '获取站点信息失败' }
+    }
+
+    if (!sites || sites.length !== siteIds.length) {
+        return { error: '部分站点不存在或无权限' }
+    }
+
+    // 批量删除 Storage 中的文件
+    for (const siteId of siteIds) {
+        const storagePath = `${user.id}/${siteId}`
+        const { data: files } = await adminClient.storage
+            .from('sites')
+            .list(storagePath)
+
+        if (files && files.length > 0) {
+            const filePaths = files.map((file: { name: string }) => `${storagePath}/${file.name}`)
+            await adminClient.storage.from('sites').remove(filePaths)
+        }
+    }
+
+    // 批量删除数据库记录
+    const { error: deleteError } = await supabase
+        .from('po_sites')
+        .delete()
+        .in('id', siteIds)
+
+    if (deleteError) {
+        console.error('Delete sites error:', deleteError)
+        return { error: '删除站点失败' }
+    }
+
+    revalidatePath('/dashboard')
+    revalidatePath('/sites')
+    
+    return { success: true, count: siteIds.length }
+}
+
 export async function getSites() {
     const supabase = await createServerSupabaseClient()
     

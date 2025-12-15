@@ -158,7 +158,7 @@ export function EditSiteDialog({ site, trigger }: EditSiteDialogProps) {
                     </div>
 
                     <div className="space-y-2">
-                        <Label>URL Slug</Label>
+                        <Label>别名 (Slug)</Label>
                         <div className="text-sm text-muted-foreground bg-muted px-3 py-2 rounded-md font-mono">
                             /{site.slug}
                         </div>
@@ -245,7 +245,7 @@ export function EditSiteDialog({ site, trigger }: EditSiteDialogProps) {
                                     <AlertDialogCancel>取消</AlertDialogCancel>
                                     <AlertDialogAction 
                                         onClick={handleDelete}
-                                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                        className="bg-destructive text-white hover:bg-destructive/90"
                                     >
                                         {deleteLoading ? (
                                             <>
