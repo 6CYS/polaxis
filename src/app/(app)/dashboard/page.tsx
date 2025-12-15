@@ -137,21 +137,21 @@ export default async function DashboardPage() {
 
             {/* 最近站点 */}
             <Card>
-                <CardHeader className="flex flex-row items-center justify-between p-4 pb-3">
+                <CardHeader className="flex flex-row items-center justify-between px-4 pt-1 pb-1">
                     <div>
-                        <CardTitle className="flex items-center gap-1.5 text-sm">
+                        <CardTitle className="flex items-center gap-1.5 text-base">
                             <TrendingUp className="h-4 w-4 text-muted-foreground" />
                             最近站点
                         </CardTitle>
-                        <CardDescription className="text-xs">
+                        <CardDescription className="text-sm">
                             您最近创建的站点一览
                         </CardDescription>
                     </div>
                     {sites.length > 0 && (
-                        <Button variant="ghost" size="sm" className="h-7 text-xs" asChild>
+                        <Button variant="ghost" size="sm" asChild>
                             <Link href="/sites">
                                 查看全部
-                                <ArrowRight className="ml-1 h-3 w-3" />
+                                <ArrowRight className="ml-1 h-3.5 w-3.5" />
                             </Link>
                         </Button>
                     )}

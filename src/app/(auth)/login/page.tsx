@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
@@ -145,10 +144,7 @@ export default function LoginPage() {
                 </CardContent>
                 <CardFooter className="flex justify-center">
                     <div className="text-sm text-gray-500">
-                        还没有账号？{' '}
-                        <Link href="/signup" className="text-blue-600 hover:underline">
-                            去注册
-                        </Link>
+                        暂不开放注册，如需账号请联系管理员
                     </div>
                 </CardFooter>
             </Card>
