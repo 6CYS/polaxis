@@ -8,21 +8,22 @@ import {
     List, 
     PlusCircle,
     Calendar,
-    FileText,
-    ExternalLink
+    Clock,
+    ExternalLink,
+    Pencil
 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import {
     Card,
     CardContent,
-    CardDescription,
     CardHeader,
     CardTitle,
 } from '@/components/ui/card'
 import { DataTable } from '@/components/ui/data-table'
 import { createColumns } from '@/components/sites/columns'
 import { CreateSiteDialog } from '@/components/sites/create-site-dialog'
+import { EditSiteDialog } from '@/components/sites/edit-site-dialog'
 import { Site } from '@/lib/database.types'
 
 interface SitesListProps {
@@ -93,57 +94,80 @@ export function SitesList({ sites, username }: SitesListProps) {
             {/* 卡片视图 */}
             {viewMode === 'card' && (
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    {sites.map((site) => (
-                        <Card key={site.id} className="group hover:shadow-md transition-all hover:border-primary/20">
-                            <CardHeader className="pb-3">
-                                <div className="flex items-start justify-between">
-                                    <div className="flex items-center gap-3">
-                                        <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                                            <Globe className="h-5 w-5 text-primary" />
+                    {sites.map((site) => {
+                        const siteUrl = `/s/${username}/${site.slug}`
+                        return (
+                            <Card key={site.id} className="group hover:shadow-md transition-all hover:border-primary/20">
+                                <CardHeader className="pb-3">
+                                    <div className="flex items-start justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                                                <Globe className="h-5 w-5 text-primary" />
+                                            </div>
+                                            <div className="space-y-1 min-w-0">
+                                                <CardTitle className="text-base truncate">
+                                                    <Link 
+                                                        href={`/sites/${site.id}`}
+                                                        className="hover:underline"
+                                                    >
+                                                        {site.name}
+                                                    </Link>
+                                                </CardTitle>
+                                                <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">
+                                                    /{site.slug}
+                                                </code>
+                                            </div>
                                         </div>
-                                        <div className="space-y-1">
-                                            <CardTitle className="text-base">
-                                                <Link 
-                                                    href={`/sites/${site.id}`}
-                                                    className="hover:underline"
+                                        <EditSiteDialog
+                                            site={site}
+                                            trigger={
+                                                <Button 
+                                                    variant="ghost" 
+                                                    size="icon" 
+                                                    className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
                                                 >
-                                                    {site.name}
-                                                </Link>
-                                            </CardTitle>
-                                            <CardDescription className="font-mono text-xs">
-                                                /{site.slug}
-                                            </CardDescription>
-                                        </div>
+                                                    <Pencil className="h-4 w-4" />
+                                                </Button>
+                                            }
+                                        />
                                     </div>
-                                    <Button 
-                                        variant="ghost" 
-                                        size="icon" 
-                                        className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
-                                        asChild
-                                    >
-                                        <Link href={`/sites/${site.id}`}>
-                                            <ExternalLink className="h-4 w-4" />
-                                        </Link>
-                                    </Button>
-                                </div>
-                            </CardHeader>
-                            <CardContent className="space-y-3">
-                                <p className="text-sm text-muted-foreground line-clamp-2 min-h-[2.5rem]">
-                                    {site.description || '暂无描述'}
-                                </p>
-                                <div className="flex items-center gap-4 text-xs text-muted-foreground pt-2 border-t">
-                                    <span className="flex items-center gap-1">
-                                        <Calendar className="h-3 w-3" />
-                                        {new Date(site.created_at).toLocaleDateString('zh-CN')}
-                                    </span>
-                                    <span className="flex items-center gap-1">
-                                        <FileText className="h-3 w-3" />
-                                        index.html
-                                    </span>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    ))}
+                                </CardHeader>
+                                <CardContent className="space-y-3">
+                                    {/* 访问地址 */}
+                                    <div className="flex items-center gap-2">
+                                        <code className="text-xs bg-muted px-2 py-1 rounded font-mono truncate flex-1">
+                                            {siteUrl}
+                                        </code>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-7 w-7 flex-shrink-0"
+                                            onClick={() => window.open(siteUrl, '_blank')}
+                                        >
+                                            <ExternalLink className="h-3.5 w-3.5" />
+                                        </Button>
+                                    </div>
+
+                                    {/* 描述 */}
+                                    <p className="text-sm text-muted-foreground line-clamp-2 min-h-[2.5rem]">
+                                        {site.description || '暂无描述'}
+                                    </p>
+
+                                    {/* 时间信息 */}
+                                    <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t">
+                                        <span className="flex items-center gap-1">
+                                            <Calendar className="h-3 w-3" />
+                                            创建: {new Date(site.created_at).toLocaleDateString('zh-CN')}
+                                        </span>
+                                        <span className="flex items-center gap-1">
+                                            <Clock className="h-3 w-3" />
+                                            更新: {new Date(site.updated_at).toLocaleDateString('zh-CN')}
+                                        </span>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        )
+                    })}
                 </div>
             )}
         </div>
