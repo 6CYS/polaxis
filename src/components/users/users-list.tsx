@@ -80,7 +80,7 @@ export function UsersList({ users, currentUserId }: UsersListProps) {
     const [userToDelete, setUserToDelete] = useState<User | null>(null)
     const [batchDeleteDialogOpen, setBatchDeleteDialogOpen] = useState(false)
     const [pendingCloseDialog, setPendingCloseDialog] = useState<'single' | 'batch' | null>(null)
-    const toastIdRef = useRef<string | number | undefined>(undefined)
+    const toastIdRef = useRef<string | undefined>(undefined)
 
     const isBusy = isDeleting || isRefreshing
 
@@ -88,9 +88,6 @@ export function UsersList({ users, currentUserId }: UsersListProps) {
         if (!pendingCloseDialog || isRefreshing) return
 
         queueMicrotask(() => {
-            toast.success('删除成功', { id: toastIdRef.current })
-            toastIdRef.current = undefined
-
             if (pendingCloseDialog === 'single') {
                 setDeleteDialogOpen(false)
                 setUserToDelete(null)
@@ -125,7 +122,8 @@ export function UsersList({ users, currentUserId }: UsersListProps) {
         if (!userToDelete) return
         
         setIsDeleting(true)
-        toastIdRef.current = toast.loading('删除中...')
+        toastIdRef.current = `user-delete-${userToDelete.id}`
+        toast.loading('删除中...', { id: toastIdRef.current })
         try {
             const result = await deleteUser(userToDelete.id)
             if (result.error) {
@@ -142,6 +140,7 @@ export function UsersList({ users, currentUserId }: UsersListProps) {
             return
         }
 
+        toast.success('删除成功，正在刷新...', { id: toastIdRef.current })
         setPendingCloseDialog('single')
         startTransition(() => {
             router.refresh()
@@ -152,7 +151,8 @@ export function UsersList({ users, currentUserId }: UsersListProps) {
         if (selectedIds.length === 0) return
         
         setIsDeleting(true)
-        toastIdRef.current = toast.loading('删除中...')
+        toastIdRef.current = 'users-batch-delete'
+        toast.loading('删除中...', { id: toastIdRef.current })
         try {
             const result = await deleteUsers(selectedIds)
             if (result.error) {
@@ -169,6 +169,7 @@ export function UsersList({ users, currentUserId }: UsersListProps) {
             return
         }
 
+        toast.success('删除成功，正在刷新...', { id: toastIdRef.current })
         setPendingCloseDialog('batch')
         startTransition(() => {
             router.refresh()

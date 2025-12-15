@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState, useTransition } from 'react'
+import { useCallback, useEffect, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Loader2, Eye, EyeOff } from 'lucide-react'
 import { toast } from 'sonner'
@@ -45,7 +45,7 @@ export function EditUserDialog({ user, trigger }: EditUserDialogProps) {
     const [shouldCloseOnRefresh, setShouldCloseOnRefresh] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [showPassword, setShowPassword] = useState(false)
-    const toastIdRef = useRef<string | number | undefined>(undefined)
+    const toastId = `user-edit-${user.id}`
     
     const [fullName, setFullName] = useState(user.user_metadata?.full_name || '')
     const [newPassword, setNewPassword] = useState('')
@@ -65,9 +65,6 @@ export function EditUserDialog({ user, trigger }: EditUserDialogProps) {
         if (!shouldCloseOnRefresh || isRefreshing) return
 
         queueMicrotask(() => {
-            toast.success('保存成功', { id: toastIdRef.current })
-            toastIdRef.current = undefined
-
             setOpen(false)
             resetForm()
             setLoading(false)
@@ -85,24 +82,23 @@ export function EditUserDialog({ user, trigger }: EditUserDialogProps) {
         formData.set('newPassword', newPassword)
         formData.set('isAdmin', isAdmin ? 'true' : 'false')
 
-        toastIdRef.current = toast.loading('保存中...')
+        toast.loading('保存中...', { id: toastId })
         let result: Awaited<ReturnType<typeof updateUser>>
         try {
             result = await updateUser(user.id, formData)
         } catch (error) {
             console.error(error)
-            toast.error('保存失败，请稍后重试', { id: toastIdRef.current })
-            toastIdRef.current = undefined
+            toast.error('保存失败，请稍后重试', { id: toastId })
             setLoading(false)
             return
         }
 
         if (result?.error) {
             setError(result.error)
-            toast.error(result.error, { id: toastIdRef.current })
-            toastIdRef.current = undefined
+            toast.error(result.error, { id: toastId })
             setLoading(false)
         } else if (result?.success) {
+            toast.success('保存成功，正在刷新...', { id: toastId })
             setShouldCloseOnRefresh(true)
             startTransition(() => {
                 router.refresh()

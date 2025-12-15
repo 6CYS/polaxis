@@ -34,7 +34,7 @@ export function CreateSiteDialog({ trigger }: CreateSiteDialogProps) {
     const [file, setFile] = useState<File | null>(null)
     const [isDragging, setIsDragging] = useState(false)
     const fileInputRef = useRef<HTMLInputElement>(null)
-    const toastIdRef = useRef<string | number | undefined>(undefined)
+    const toastId = 'site-create'
 
     const isBusy = loading || isRefreshing
 
@@ -130,9 +130,6 @@ export function CreateSiteDialog({ trigger }: CreateSiteDialogProps) {
         if (!shouldCloseOnRefresh || isRefreshing) return
 
         queueMicrotask(() => {
-            toast.success('创建成功', { id: toastIdRef.current })
-            toastIdRef.current = undefined
-
             setOpen(false)
             resetForm()
             setLoading(false)
@@ -153,24 +150,23 @@ export function CreateSiteDialog({ trigger }: CreateSiteDialogProps) {
         formData.set('slug', slug)
         formData.set('file', file)
 
-        toastIdRef.current = toast.loading('创建站点中...')
+        toast.loading('创建站点中...', { id: toastId })
         let result: Awaited<ReturnType<typeof createSiteWithFile>>
         try {
             result = await createSiteWithFile(formData)
         } catch (e) {
             console.error(e)
-            toast.error('创建失败，请稍后重试', { id: toastIdRef.current })
-            toastIdRef.current = undefined
+            toast.error('创建失败，请稍后重试', { id: toastId })
             setLoading(false)
             return
         }
 
         if (result?.error) {
             setError(result.error)
-            toast.error(result.error, { id: toastIdRef.current })
-            toastIdRef.current = undefined
+            toast.error(result.error, { id: toastId })
             setLoading(false)
         } else if (result?.success) {
+            toast.success('创建成功，正在刷新...', { id: toastId })
             setShouldCloseOnRefresh(true)
             startTransition(() => {
                 router.refresh()

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState, useTransition } from 'react'
+import { useEffect, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { RowSelectionState } from '@tanstack/react-table'
 import { 
@@ -62,7 +62,7 @@ export function SitesList({ sites, username }: SitesListProps) {
     const [isDeleting, setIsDeleting] = useState(false)
     const [batchDeleteDialogOpen, setBatchDeleteDialogOpen] = useState(false)
     const [shouldCloseOnRefresh, setShouldCloseOnRefresh] = useState(false)
-    const toastIdRef = useRef<string | number | undefined>(undefined)
+    const toastId = 'sites-batch-delete'
     const columns = createColumns(username)
 
     const isBusy = isDeleting || isRefreshing
@@ -79,9 +79,6 @@ export function SitesList({ sites, username }: SitesListProps) {
         if (!shouldCloseOnRefresh || isRefreshing) return
 
         queueMicrotask(() => {
-            toast.success('删除成功', { id: toastIdRef.current })
-            toastIdRef.current = undefined
-
             setRowSelection({})
             setIsDeleting(false)
             setBatchDeleteDialogOpen(false)
@@ -93,24 +90,23 @@ export function SitesList({ sites, username }: SitesListProps) {
         if (selectedSiteIds.length === 0) return
 
         setIsDeleting(true)
-        toastIdRef.current = toast.loading('删除中...')
+        toast.loading('删除中...', { id: toastId })
         try {
             const result = await deleteSites(selectedSiteIds)
             if (result.error) {
                 console.error('Delete sites error:', result.error)
-                toast.error(result.error, { id: toastIdRef.current })
-                toastIdRef.current = undefined
+                toast.error(result.error, { id: toastId })
                 setIsDeleting(false)
                 return
             }
         } catch (error) {
             console.error('Delete sites error:', error)
-            toast.error('删除失败，请稍后重试', { id: toastIdRef.current })
-            toastIdRef.current = undefined
+            toast.error('删除失败，请稍后重试', { id: toastId })
             setIsDeleting(false)
             return
         }
 
+        toast.success('删除成功，正在刷新...', { id: toastId })
         setShouldCloseOnRefresh(true)
         startTransition(() => {
             router.refresh()

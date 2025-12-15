@@ -49,7 +49,7 @@ export function EditSiteDialog({ site, trigger }: EditSiteDialogProps) {
     const [description, setDescription] = useState(site.description || '')
     const [file, setFile] = useState<File | null>(null)
     const fileInputRef = useRef<HTMLInputElement>(null)
-    const toastIdRef = useRef<string | number | undefined>(undefined)
+    const toastId = `site-edit-${site.id}`
 
     const isBusy = loading || deleteLoading || isRefreshing
 
@@ -68,9 +68,6 @@ export function EditSiteDialog({ site, trigger }: EditSiteDialogProps) {
         if (!shouldCloseOnRefresh || isRefreshing) return
 
         queueMicrotask(() => {
-            toast.success('保存成功', { id: toastIdRef.current })
-            toastIdRef.current = undefined
-
             setOpen(false)
             resetForm()
             setLoading(false)
@@ -100,7 +97,7 @@ export function EditSiteDialog({ site, trigger }: EditSiteDialogProps) {
         setLoading(true)
         setError(null)
         setSuccess(null)
-        toastIdRef.current = toast.loading('保存中...')
+        toast.loading('保存中...', { id: toastId })
 
         // 更新站点信息
         const formData = new FormData()
@@ -112,16 +109,14 @@ export function EditSiteDialog({ site, trigger }: EditSiteDialogProps) {
             updateResult = await updateSite(site.id, formData)
         } catch (e) {
             console.error(e)
-            toast.error('保存失败，请稍后重试', { id: toastIdRef.current })
-            toastIdRef.current = undefined
+            toast.error('保存失败，请稍后重试', { id: toastId })
             setLoading(false)
             return
         }
 
         if (updateResult?.error) {
             setError(updateResult.error)
-            toast.error(updateResult.error, { id: toastIdRef.current })
-            toastIdRef.current = undefined
+            toast.error(updateResult.error, { id: toastId })
             setLoading(false)
             return
         }
@@ -135,16 +130,14 @@ export function EditSiteDialog({ site, trigger }: EditSiteDialogProps) {
                 uploadResult = await uploadSiteFile(site.id, fileFormData)
             } catch (e) {
                 console.error(e)
-                toast.error('文件上传失败，请稍后重试', { id: toastIdRef.current })
-                toastIdRef.current = undefined
+                toast.error('文件上传失败，请稍后重试', { id: toastId })
                 setLoading(false)
                 return
             }
 
             if (uploadResult?.error) {
                 setError(uploadResult.error)
-                toast.error(uploadResult.error, { id: toastIdRef.current })
-                toastIdRef.current = undefined
+                toast.error(uploadResult.error, { id: toastId })
                 setLoading(false)
                 return
             }
@@ -156,6 +149,7 @@ export function EditSiteDialog({ site, trigger }: EditSiteDialogProps) {
             fileInputRef.current.value = ''
         }
 
+        toast.success('保存成功，正在刷新...', { id: toastId })
         setShouldCloseOnRefresh(true)
         startTransition(() => {
             router.refresh()
