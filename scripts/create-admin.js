@@ -34,28 +34,33 @@ async function createAdmin() {
   const existingUser = users.find(u => u.email === email);
 
   if (existingUser) {
-    console.log('✅ User already exists. Updating password...');
+    console.log('✅ User already exists. Updating password and setting admin role...');
     const { error: updateError } = await supabase.auth.admin.updateUserById(
       existingUser.id,
-      { password: password, email_confirm: true }
+      { 
+        password: password, 
+        email_confirm: true,
+        app_metadata: { role: 'admin' }
+      }
     );
     if (updateError) {
-       console.error('❌ Error updating password:', updateError.message);
+       console.error('❌ Error updating user:', updateError.message);
     } else {
-       console.log('✅ Password updated successfully.');
+       console.log('✅ User updated successfully with admin role.');
     }
   } else {
-    console.log('User does not exist. Creating...');
+    console.log('User does not exist. Creating with admin role...');
     const { data, error } = await supabase.auth.admin.createUser({
       email,
       password,
       email_confirm: true, // Auto confirm email
+      app_metadata: { role: 'admin' }
     });
 
     if (error) {
       console.error('❌ Error creating user:', error.message);
     } else {
-      console.log('✅ User created successfully:', data.user.id);
+      console.log('✅ Admin user created successfully:', data.user.id);
     }
   }
 }
