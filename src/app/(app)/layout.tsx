@@ -3,6 +3,7 @@ import Image from 'next/image'
 import { MobileNav } from '@/components/dashboard/mobile-nav'
 import { Sidebar } from '@/components/dashboard/sidebar'
 import { UserNav } from '@/components/dashboard/user-nav'
+import { PageTransition } from '@/components/page-transition'
 
 interface DashboardLayoutProps {
     children: React.ReactNode
@@ -56,7 +57,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                     <Sidebar />
                 </aside>
                 <main className="flex w-full flex-col overflow-hidden p-6">
-                    {children}
+                    <PageTransition>
+                        {children}
+                    </PageTransition>
                 </main>
             </div>
         </div>
