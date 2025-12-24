@@ -73,17 +73,6 @@ export function createColumns(username: string): ColumnDef<Site>[] {
             },
         },
         {
-            accessorKey: "slug",
-            header: "别名 (Slug)",
-            cell: ({ row }) => {
-                return (
-                    <code className="text-xs bg-muted px-2 py-1 rounded font-mono">
-                        /{row.getValue("slug")}
-                    </code>
-                )
-            },
-        },
-        {
             id: "url",
             header: "访问地址",
             cell: ({ row }) => {
