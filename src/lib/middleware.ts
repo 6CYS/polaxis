@@ -30,8 +30,22 @@ export async function updateSession(request: NextRequest) {
     // 尝试获取用户信息，添加错误处理
     let user = null
     try {
-        const { data } = await supabase.auth.getUser()
-        user = data.user
+        const { data, error } = await supabase.auth.getUser()
+        if (error) {
+            // 处理 refresh token 无效等认证错误
+            if (error.code === 'refresh_token_not_found' || error.code === 'session_not_found') {
+                // 清除无效的 auth cookies
+                const authCookies = request.cookies.getAll().filter(
+                    cookie => cookie.name.includes('sb-') && cookie.name.includes('-auth-token')
+                )
+                authCookies.forEach(cookie => {
+                    supabaseResponse.cookies.delete(cookie.name)
+                })
+                // user 保持为 null，让后续逻辑处理未登录状态
+            }
+        } else {
+            user = data.user
+        }
     } catch (error) {
         // 在 Edge Runtime 中可能会遇到网络问题，优雅降级
         console.warn('Middleware: Failed to get user session, continuing without auth check')

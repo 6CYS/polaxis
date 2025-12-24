@@ -3,7 +3,15 @@
     "allow": [
       "Bash(cat:*)",
       "Bash(npm run lint:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "mcp__chrome-devtools__list_pages",
+      "mcp__chrome-devtools__navigate_page",
+      "mcp__chrome-devtools__take_screenshot",
+      "mcp__chrome-devtools__take_snapshot",
+      "mcp__chrome-devtools__click",
+      "mcp__chrome-devtools__upload_file",
+      "mcp__chrome-devtools__fill_form",
+      "mcp__chrome-devtools__wait_for"
     ]
   },
   "enableAllProjectMcpServers": true,

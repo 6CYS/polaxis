@@ -3,14 +3,15 @@
 import { useEffect, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { RowSelectionState } from '@tanstack/react-table'
-import { 
-    Globe, 
-    LayoutGrid, 
-    List, 
+import {
+    Globe,
+    LayoutGrid,
+    List,
     PlusCircle,
     Calendar,
     Clock,
     ExternalLink,
+    Copy,
     Pencil,
     Trash2
 } from 'lucide-react'
@@ -218,8 +219,8 @@ export function SitesList({ sites, username }: SitesListProps) {
                                 <CardHeader className="pb-3">
                                     <div className="flex items-start justify-between gap-2">
                                         <div className="flex items-center gap-3 min-w-0 flex-1">
-                                            <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                                                <Globe className="h-5 w-5 text-primary" />
+                                            <div className="flex items-center justify-center w-10 h-10 rounded-md bg-violet-100 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400 font-semibold text-base flex-shrink-0">
+                                                {site.name.charAt(0).toUpperCase()}
                                             </div>
                                             <div className="space-y-1 min-w-0 flex-1">
                                                 {site.name.length > 12 ? (
@@ -261,7 +262,7 @@ export function SitesList({ sites, username }: SitesListProps) {
                                 </CardHeader>
                                 <CardContent className="space-y-3">
                                     {/* 访问地址 */}
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex items-center gap-1">
                                         <code className="text-xs bg-muted px-2 py-1 rounded font-mono truncate flex-1">
                                             {siteUrl}
                                         </code>
@@ -269,7 +270,24 @@ export function SitesList({ sites, username }: SitesListProps) {
                                             variant="ghost"
                                             size="icon"
                                             className="h-7 w-7 flex-shrink-0"
+                                            onClick={() => {
+                                                const fullUrl = `${window.location.origin}${siteUrl}`
+                                                navigator.clipboard.writeText(fullUrl).then(() => {
+                                                    toast.success('已复制到剪贴板')
+                                                }).catch(() => {
+                                                    toast.error('复制失败')
+                                                })
+                                            }}
+                                            title="复制地址"
+                                        >
+                                            <Copy className="h-3.5 w-3.5" />
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-7 w-7 flex-shrink-0"
                                             onClick={() => window.open(siteUrl, '_blank')}
+                                            title="在新窗口打开"
                                         >
                                             <ExternalLink className="h-3.5 w-3.5" />
                                         </Button>

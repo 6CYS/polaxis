@@ -1,7 +1,8 @@
 "use client"
 
 import { ColumnDef } from "@tanstack/react-table"
-import { Globe, ExternalLink } from "lucide-react"
+import { ExternalLink, Copy } from "lucide-react"
+import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -44,11 +45,11 @@ export function createColumns(username: string): ColumnDef<Site>[] {
             cell: ({ row }) => {
                 const site = row.original
                 const displayName = site.name.length > 12 ? `${site.name.slice(0, 12)}...` : site.name
-                
+
                 const content = (
                     <div className="flex items-center gap-3">
-                        <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                            <Globe className="h-4 w-4 text-primary" />
+                        <div className="flex items-center justify-center w-8 h-8 rounded-md bg-violet-100 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400 font-semibold text-sm flex-shrink-0">
+                            {site.name.charAt(0).toUpperCase()}
                         </div>
                         <span className="font-medium">{displayName}</span>
                     </div>
@@ -87,17 +88,35 @@ export function createColumns(username: string): ColumnDef<Site>[] {
             header: "访问地址",
             cell: ({ row }) => {
                 const site = row.original
-                const url = `/s/${username}/${site.slug}`
+                const path = `/s/${username}/${site.slug}`
+                const handleCopy = () => {
+                    const fullUrl = `${window.location.origin}${path}`
+                    navigator.clipboard.writeText(fullUrl).then(() => {
+                        toast.success('已复制到剪贴板')
+                    }).catch(() => {
+                        toast.error('复制失败')
+                    })
+                }
                 return (
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1">
                         <code className="text-xs bg-muted px-2 py-1 rounded font-mono">
-                            {url}
+                            {path}
                         </code>
                         <Button
                             variant="ghost"
                             size="icon"
                             className="h-7 w-7"
-                            onClick={() => window.open(url, '_blank')}
+                            onClick={handleCopy}
+                            title="复制地址"
+                        >
+                            <Copy className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={() => window.open(path, '_blank')}
+                            title="在新窗口打开"
                         >
                             <ExternalLink className="h-3.5 w-3.5" />
                         </Button>
