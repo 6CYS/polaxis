@@ -78,20 +78,22 @@ export function CreateSiteDialog({ trigger }: CreateSiteDialogProps) {
 
     // 递归处理文件夹
     const processEntryRecursive = async (
-        entry: any,
+        entry: FileSystemEntry,
         path: string,
         filesList: FileWithPath[]
     ) => {
         if (entry.isFile) {
+            const fileEntry = entry as FileSystemFileEntry
             const file = await new Promise<File>((resolve) => {
-                entry.file((f: File) => resolve(f))
+                fileEntry.file((f: File) => resolve(f))
             })
             const relativePath = path ? `${path}/${file.name}` : file.name
             filesList.push({ file, path: relativePath })
         } else if (entry.isDirectory) {
-            const reader = entry.createReader()
-            const entries = await new Promise<any[]>((resolve) => {
-                reader.readEntries((e: any[]) => resolve(e))
+            const dirEntry = entry as FileSystemDirectoryEntry
+            const reader = dirEntry.createReader()
+            const entries = await new Promise<FileSystemEntry[]>((resolve) => {
+                reader.readEntries((e) => resolve(e))
             })
             for (const subEntry of entries) {
                 await processEntryRecursive(
@@ -115,9 +117,10 @@ export function CreateSiteDialog({ trigger }: CreateSiteDialogProps) {
                     if (entry.isDirectory) {
                         folderName = entry.name
                         // 递归处理目录内容，但不包含顶层文件夹名称
-                        const reader = entry.createReader()
-                        const entries = await new Promise<any[]>((resolve) => {
-                            reader.readEntries((e: any[]) => resolve(e))
+                        const dirEntry = entry as FileSystemDirectoryEntry
+                        const reader = dirEntry.createReader()
+                        const entries = await new Promise<FileSystemEntry[]>((resolve) => {
+                            reader.readEntries((e) => resolve(e))
                         })
                         for (const subEntry of entries) {
                             await processEntryRecursive(subEntry, '', filesList)
