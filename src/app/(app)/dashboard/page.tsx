@@ -50,8 +50,8 @@ export default async function DashboardPage() {
                     </h1>
                     
                     <p className="text-sm text-muted-foreground leading-relaxed mb-4 max-w-xl">
-                        一站式静态站点托管解决方案。轻松上传您的 HTML 页面，获得即时可分享的链接。
-                        无需配置服务器，无需复杂部署流程，专注于创作优质内容。
+                        一站式静态站点托管解决方案。直接拖拽文件夹上传，支持 HTML、CSS、JS、图片等多种文件，
+                        构建完整的静态网站。无需配置服务器，无需复杂部署流程，专注于创作优质内容。
                     </p>
                     
                     <div className="flex flex-wrap gap-2">
@@ -171,7 +171,7 @@ export default async function DashboardPage() {
                             </div>
                             <h4 className="text-sm font-semibold mb-1">暂无站点</h4>
                             <p className="text-xs text-muted-foreground mb-4 max-w-sm">
-                                开始创建您的第一个站点，只需上传 HTML 文件即可获得可分享的链接
+                                拖拽文件夹即可创建站点，支持 HTML、CSS、JS、图片等多种文件
                             </p>
                             <CreateSiteDialog />
                         </div>

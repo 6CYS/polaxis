@@ -11,7 +11,19 @@
       "mcp__chrome-devtools__click",
       "mcp__chrome-devtools__upload_file",
       "mcp__chrome-devtools__fill_form",
-      "mcp__chrome-devtools__wait_for"
+      "mcp__chrome-devtools__wait_for",
+      "Bash(npm run dev)",
+      "mcp__supabase__list_tables",
+      "mcp__supabase__execute_sql",
+      "Bash(curl:*)",
+      "Bash(echo:*)",
+      "Bash(ls:*)",
+      "Bash(npx tsx:*)",
+      "mcp__chrome-devtools__list_network_requests",
+      "mcp__chrome-devtools__list_console_messages",
+      "mcp__chrome-devtools__get_network_request",
+      "mcp__chrome-devtools__evaluate_script",
+      "mcp__chrome-devtools__press_key"
     ]
   },
   "enableAllProjectMcpServers": true,

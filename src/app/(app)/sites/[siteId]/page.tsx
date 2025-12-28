@@ -4,6 +4,8 @@ import { ExternalLink } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { EditSiteDialog } from '@/components/sites/edit-site-dialog'
+import { MultiFileUpload } from '@/components/sites/multi-file-upload'
+import { FileList } from '@/components/sites/file-list'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 
 interface SitePageProps {
@@ -98,6 +100,24 @@ export default async function SitePage({ params }: SitePageProps) {
                         <span className="text-muted-foreground">更新时间：</span>
                         <span>{new Date(site.updated_at).toLocaleString('zh-CN')}</span>
                     </div>
+                </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle className="text-base">文件上传</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <MultiFileUpload siteId={site.id} />
+                </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle className="text-base">文件列表</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <FileList siteId={site.id} />
                 </CardContent>
             </Card>
         </div>

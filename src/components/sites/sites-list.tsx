@@ -120,8 +120,8 @@ export function SitesList({ sites, username }: SitesListProps) {
                 <CardContent className="flex flex-col items-center justify-center py-16">
                     <Globe className="h-12 w-12 text-muted-foreground mb-4" />
                     <h4 className="text-lg font-semibold mb-2">暂无站点</h4>
-                    <p className="text-muted-foreground text-center mb-4">
-                        您还没有创建任何站点，点击下方按钮开始创建
+                    <p className="text-muted-foreground text-center mb-4 max-w-md">
+                        拖拽文件夹即可创建站点，支持 HTML、CSS、JS、图片等多种文件
                     </p>
                     <CreateSiteDialog
                         trigger={
