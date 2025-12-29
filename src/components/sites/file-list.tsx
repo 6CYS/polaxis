@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { FileText, Trash2, Loader2, RefreshCw } from 'lucide-react'
+import { FileText, Folder, FolderOpen, Trash2, Loader2, RefreshCw, ChevronRight, ChevronDown } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { listSiteFiles, deleteSiteFile } from '@/lib/actions/sites'
@@ -28,12 +28,166 @@ interface SiteFile {
   lastModified: string
 }
 
+interface TreeNode {
+  name: string
+  path: string
+  isFolder: boolean
+  size?: number
+  lastModified?: string
+  children: TreeNode[]
+}
+
+function buildFileTree(files: SiteFile[]): TreeNode[] {
+  const root: TreeNode[] = []
+
+  for (const file of files) {
+    const parts = file.path.split('/')
+    let currentLevel = root
+
+    for (let i = 0; i < parts.length; i++) {
+      const part = parts[i]
+      const isLastPart = i === parts.length - 1
+      const currentPath = parts.slice(0, i + 1).join('/')
+
+      let existingNode = currentLevel.find(node => node.name === part)
+
+      if (!existingNode) {
+        const newNode: TreeNode = {
+          name: part,
+          path: currentPath,
+          isFolder: !isLastPart,
+          children: [],
+        }
+
+        if (isLastPart) {
+          newNode.size = file.size
+          newNode.lastModified = file.lastModified
+        }
+
+        currentLevel.push(newNode)
+        existingNode = newNode
+      }
+
+      currentLevel = existingNode.children
+    }
+  }
+
+  const sortNodes = (nodes: TreeNode[]): TreeNode[] => {
+    return nodes.sort((a, b) => {
+      if (a.isFolder && !b.isFolder) return -1
+      if (!a.isFolder && b.isFolder) return 1
+      return a.name.localeCompare(b.name)
+    }).map(node => ({
+      ...node,
+      children: sortNodes(node.children)
+    }))
+  }
+
+  return sortNodes(root)
+}
+
+interface FileTreeNodeProps {
+  node: TreeNode
+  level: number
+  expandedFolders: Set<string>
+  toggleFolder: (path: string) => void
+  onDelete: (file: SiteFile) => void
+  deleting: string | null
+  formatFileSize: (bytes: number) => string
+}
+
+function FileTreeNode({
+  node,
+  level,
+  expandedFolders,
+  toggleFolder,
+  onDelete,
+  deleting,
+  formatFileSize,
+}: FileTreeNodeProps) {
+  const isExpanded = expandedFolders.has(node.path)
+  const paddingLeft = level * 20
+
+  if (node.isFolder) {
+    return (
+      <div>
+        <div
+          className="flex items-center gap-2 py-2 px-3 hover:bg-muted/50 cursor-pointer transition-colors"
+          style={{ paddingLeft: `${paddingLeft + 12}px` }}
+          onClick={() => toggleFolder(node.path)}
+        >
+          {isExpanded ? (
+            <ChevronDown className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+          ) : (
+            <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+          )}
+          {isExpanded ? (
+            <FolderOpen className="h-4 w-4 text-amber-500 flex-shrink-0" />
+          ) : (
+            <Folder className="h-4 w-4 text-amber-500 flex-shrink-0" />
+          )}
+          <span className="font-medium text-sm">{node.name}</span>
+        </div>
+        {isExpanded && node.children.length > 0 && (
+          <div>
+            {node.children.map((child) => (
+              <FileTreeNode
+                key={child.path}
+                node={child}
+                level={level + 1}
+                expandedFolders={expandedFolders}
+                toggleFolder={toggleFolder}
+                onDelete={onDelete}
+                deleting={deleting}
+                formatFileSize={formatFileSize}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  return (
+    <div
+      className="flex items-center justify-between py-2 px-3 hover:bg-muted/50 transition-colors group"
+      style={{ paddingLeft: `${paddingLeft + 32}px` }}
+    >
+      <div className="flex items-center gap-2 flex-1 min-w-0">
+        <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+        <span className="text-sm truncate" title={node.name}>{node.name}</span>
+        {node.size !== undefined && (
+          <span className="text-xs text-muted-foreground flex-shrink-0">
+            {formatFileSize(node.size)}
+          </span>
+        )}
+      </div>
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => onDelete({ name: node.name, path: node.path, size: node.size || 0, lastModified: node.lastModified || '' })}
+        disabled={deleting === node.path}
+        className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 text-red-600 hover:text-red-700 hover:bg-red-50 transition-opacity"
+      >
+        {deleting === node.path ? (
+          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+        ) : (
+          <Trash2 className="h-3.5 w-3.5" />
+        )}
+      </Button>
+    </div>
+  )
+}
+
 export function FileList({ siteId }: FileListProps) {
   const router = useRouter()
   const [files, setFiles] = useState<SiteFile[]>([])
   const [loading, setLoading] = useState(true)
   const [deleting, setDeleting] = useState<string | null>(null)
   const [fileToDelete, setFileToDelete] = useState<SiteFile | null>(null)
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set())
+
+  const fileTree = useMemo(() => buildFileTree(files), [files])
 
   const loadFiles = async () => {
     setLoading(true)
@@ -43,6 +197,14 @@ export function FileList({ siteId }: FileListProps) {
         console.error('Load files error:', result.error)
       } else if (result.files) {
         setFiles(result.files)
+        const folders = new Set<string>()
+        result.files.forEach(file => {
+          const parts = file.path.split('/')
+          for (let i = 1; i < parts.length; i++) {
+            folders.add(parts.slice(0, i).join('/'))
+          }
+        })
+        setExpandedFolders(folders)
       }
     } catch (err) {
       console.error('Load files error:', err)
@@ -53,7 +215,20 @@ export function FileList({ siteId }: FileListProps) {
 
   useEffect(() => {
     loadFiles()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [siteId])
+
+  const toggleFolder = (path: string) => {
+    setExpandedFolders(prev => {
+      const next = new Set(prev)
+      if (next.has(path)) {
+        next.delete(path)
+      } else {
+        next.add(path)
+      }
+      return next
+    })
+  }
 
   const handleDelete = async (file: SiteFile) => {
     setDeleting(file.path)
@@ -77,17 +252,6 @@ export function FileList({ siteId }: FileListProps) {
     if (bytes < 1024) return `${bytes} B`
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
     return `${(bytes / 1024 / 1024).toFixed(1)} MB`
-  }
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleString('zh-CN', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-    })
   }
 
   if (loading) {
@@ -121,37 +285,18 @@ export function FileList({ siteId }: FileListProps) {
         </Button>
       </div>
 
-      <div className="border rounded-lg divide-y">
-        {files.map((file) => (
-          <div
-            key={file.path}
-            className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors"
-          >
-            <div className="flex items-center gap-3 flex-1 min-w-0">
-              <FileText className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="font-medium truncate" title={file.path}>
-                  {file.path}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  {formatFileSize(file.size)} · {formatDate(file.lastModified)}
-                </p>
-              </div>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setFileToDelete(file)}
-              disabled={deleting === file.path}
-              className="text-red-600 hover:text-red-700 hover:bg-red-50"
-            >
-              {deleting === file.path ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Trash2 className="h-4 w-4" />
-              )}
-            </Button>
-          </div>
+      <div className="border rounded-lg overflow-hidden">
+        {fileTree.map((node) => (
+          <FileTreeNode
+            key={node.path}
+            node={node}
+            level={0}
+            expandedFolders={expandedFolders}
+            toggleFolder={toggleFolder}
+            onDelete={setFileToDelete}
+            deleting={deleting}
+            formatFileSize={formatFileSize}
+          />
         ))}
       </div>
 

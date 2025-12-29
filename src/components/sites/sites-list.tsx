@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { RowSelectionState } from '@tanstack/react-table'
 import {
     Globe,
@@ -227,9 +228,11 @@ export function SitesList({ sites, username }: SitesListProps) {
                                                     <TooltipProvider>
                                                         <Tooltip>
                                                             <TooltipTrigger asChild>
-                                                                <CardTitle className="text-base cursor-default">
-                                                                    {site.name.slice(0, 12)}...
-                                                                </CardTitle>
+                                                                <Link href={`/sites/${site.id}`}>
+                                                                    <CardTitle className="text-base cursor-pointer hover:underline">
+                                                                        {site.name.slice(0, 12)}...
+                                                                    </CardTitle>
+                                                                </Link>
                                                             </TooltipTrigger>
                                                             <TooltipContent>
                                                                 <p>{site.name}</p>
@@ -237,9 +240,11 @@ export function SitesList({ sites, username }: SitesListProps) {
                                                         </Tooltip>
                                                     </TooltipProvider>
                                                 ) : (
-                                                    <CardTitle className="text-base cursor-default">
-                                                        {site.name}
-                                                    </CardTitle>
+                                                    <Link href={`/sites/${site.id}`}>
+                                                        <CardTitle className="text-base cursor-pointer hover:underline">
+                                                            {site.name}
+                                                        </CardTitle>
+                                                    </Link>
                                                 )}
                                                 <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono block truncate">
                                                     /{site.slug}

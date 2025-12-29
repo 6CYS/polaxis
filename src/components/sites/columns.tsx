@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import { ColumnDef } from "@tanstack/react-table"
 import { ExternalLink, Copy } from "lucide-react"
 import { toast } from "sonner"
@@ -47,12 +48,15 @@ export function createColumns(username: string): ColumnDef<Site>[] {
                 const displayName = site.name.length > 12 ? `${site.name.slice(0, 12)}...` : site.name
 
                 const content = (
-                    <div className="flex items-center gap-3">
+                    <Link
+                        href={`/sites/${site.id}`}
+                        className="flex items-center gap-3 hover:opacity-80 transition-opacity"
+                    >
                         <div className="flex items-center justify-center w-8 h-8 rounded-md bg-violet-100 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400 font-semibold text-sm flex-shrink-0">
                             {site.name.charAt(0).toUpperCase()}
                         </div>
-                        <span className="font-medium">{displayName}</span>
-                    </div>
+                        <span className="font-medium hover:underline">{displayName}</span>
+                    </Link>
                 )
 
                 return (

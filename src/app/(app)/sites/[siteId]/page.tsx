@@ -60,7 +60,7 @@ export default async function SitePage({ params }: SitePageProps) {
     const publicUrl = `/s/${username}/${site.slug}`
 
     return (
-        <div className="space-y-4">
+        <div className="space-y-3">
             <div className="flex flex-wrap items-start justify-between gap-2">
                 <div className="min-w-0">
                     <h2 className="text-2xl font-bold tracking-tight truncate">{site.name}</h2>
@@ -77,46 +77,48 @@ export default async function SitePage({ params }: SitePageProps) {
                 </div>
             </div>
 
-            <Card>
-                <CardHeader>
+            <Card className="py-4 gap-3">
+                <CardHeader className="px-4 py-0">
                     <CardTitle className="text-base">站点信息</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-2 text-sm">
-                    <div className="flex flex-wrap gap-x-6 gap-y-1">
-                        <span className="text-muted-foreground">Slug：</span>
-                        <span className="font-mono">/{site.slug}</span>
-                    </div>
-                    {site.description && (
-                        <div className="flex flex-wrap gap-x-6 gap-y-1">
-                            <span className="text-muted-foreground">描述：</span>
-                            <span>{site.description}</span>
+                <CardContent className="px-4 text-sm">
+                    <div className="flex flex-wrap gap-x-6 gap-y-2">
+                        <div className="flex items-center gap-1.5">
+                            <span className="text-muted-foreground">Slug：</span>
+                            <span className="font-mono">/{site.slug}</span>
                         </div>
-                    )}
-                    <div className="flex flex-wrap gap-x-6 gap-y-1">
-                        <span className="text-muted-foreground">创建时间：</span>
-                        <span>{new Date(site.created_at).toLocaleString('zh-CN')}</span>
-                    </div>
-                    <div className="flex flex-wrap gap-x-6 gap-y-1">
-                        <span className="text-muted-foreground">更新时间：</span>
-                        <span>{new Date(site.updated_at).toLocaleString('zh-CN')}</span>
+                        {site.description && (
+                            <div className="flex items-center gap-1.5">
+                                <span className="text-muted-foreground">描述：</span>
+                                <span>{site.description}</span>
+                            </div>
+                        )}
+                        <div className="flex items-center gap-1.5">
+                            <span className="text-muted-foreground">创建时间：</span>
+                            <span>{new Date(site.created_at).toLocaleString('zh-CN')}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                            <span className="text-muted-foreground">更新时间：</span>
+                            <span>{new Date(site.updated_at).toLocaleString('zh-CN')}</span>
+                        </div>
                     </div>
                 </CardContent>
             </Card>
 
-            <Card>
-                <CardHeader>
+            <Card className="py-4 gap-3">
+                <CardHeader className="px-4 py-0">
                     <CardTitle className="text-base">文件上传</CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="px-4">
                     <MultiFileUpload siteId={site.id} />
                 </CardContent>
             </Card>
 
-            <Card>
-                <CardHeader>
+            <Card className="py-4 gap-3">
+                <CardHeader className="px-4 py-0">
                     <CardTitle className="text-base">文件列表</CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="px-4">
                     <FileList siteId={site.id} />
                 </CardContent>
             </Card>
