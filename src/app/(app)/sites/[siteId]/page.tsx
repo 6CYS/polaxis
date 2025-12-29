@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { ExternalLink } from 'lucide-react'
+import { ExternalLink, ArrowLeft } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -61,10 +61,15 @@ export default async function SitePage({ params }: SitePageProps) {
 
     return (
         <div className="space-y-3">
-            <div className="flex flex-wrap items-start justify-between gap-2">
-                <div className="min-w-0">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-3 min-w-0">
+                    <Button variant="ghost" size="icon" asChild className="h-9 w-9 flex-shrink-0">
+                        <Link href="/sites">
+                            <ArrowLeft className="h-4 w-4" />
+                        </Link>
+                    </Button>
                     <h2 className="text-2xl font-bold tracking-tight truncate">{site.name}</h2>
-                    <p className="text-sm text-muted-foreground font-mono">{publicUrl}</p>
+                    <code className="text-sm text-muted-foreground font-mono bg-muted px-2 py-0.5 rounded">{publicUrl}</code>
                 </div>
                 <div className="flex items-center gap-2">
                     <Button variant="outline" asChild>
